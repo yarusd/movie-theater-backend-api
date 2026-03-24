@@ -7,13 +7,11 @@ const Joi = require('joi');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// ── MIDDLEWARES ──
+// ── 1. MIDDLEWARES ──
 app.use(cors());
 app.use(bodyParser.json());
-// Serving the documentation (index.html) as the root page
-app.use(express.static('.'));
 
-// ── 1. SECURITY (API Key) ──
+// ── 2. SECURITY (API Key Logic) ──
 const SECRET_API_KEY = process.env.API_KEY || "my-temp-key";
 
 const requireApiKey = (req, res, next) => {
@@ -22,7 +20,7 @@ const requireApiKey = (req, res, next) => {
     res.status(401).json({ error: "Unauthorized", message: "Invalid or missing x-api-key header." });
 };
 
-// ── 2. VALIDATION (Joi Schema) ──
+// ── 3. VALIDATION (Joi Schema) ──
 const movieSchema = Joi.object({
     title: Joi.string().min(2).max(100).required(),
     genre: Joi.string().valid('Action', 'Horror', 'Comedy', 'Drama', 'Animation', 'Sci-Fi', 'Thriller', 'Adventure', 'Romance').required(),
@@ -34,7 +32,7 @@ const movieSchema = Joi.object({
     cast: Joi.array().items(Joi.string()).default([])
 });
 
-// ── 3. DATA (Users & 60 Movies) ──
+// ── 4. DATA (Users & 60 Movies) ──
 let TEST_USERS = [
     { id: 1, email: "user1@test.com", password: "123456", name: "Alice Cohen", role: "user", isLocked: false },
     { id: 2, email: "user2@test.com", password: "123456", name: "Bob Levi", role: "user", isLocked: false },
@@ -107,7 +105,7 @@ let MOVIES = [
 
 let ORDERS = [];
 
-// ── 4. GET ROUTES ──
+// ── 5. API ROUTES ──
 
 app.get('/api/health', (req, res) => {
     res.json({ 
@@ -132,8 +130,6 @@ app.get('/api/movies', (req, res) => {
     }
     res.json(result);
 });
-
-// ── 5. POST ROUTES ──
 
 app.post('/api/register', (req, res) => {
     res.status(201).json({
@@ -175,8 +171,6 @@ app.post('/api/orders', (req, res) => {
     });
 });
 
-// ── 6. PUT ROUTE ──
-
 app.put('/api/movies/:id', requireApiKey, (req, res) => {
     const id = parseInt(req.params.id);
     const movieIndex = MOVIES.findIndex(m => m.id === id);
@@ -191,8 +185,6 @@ app.put('/api/movies/:id', requireApiKey, (req, res) => {
         updatedFields: req.body
     });
 });
-
-// ── 7. DELETE ROUTES ──
 
 app.delete('/api/movies/:id', requireApiKey, (req, res) => {
     const id = parseInt(req.params.id);
@@ -211,17 +203,21 @@ app.delete('/api/test/reset', requireApiKey, (req, res) => {
     res.json({ success: true, message: "Database reset completed" });
 });
 
-// ── 8. ERROR HANDLING ──
+// ── 6. SERVING STATIC FILES (The Documentation) ──
+// אנחנו משתמשים בתיקיית public כדי להגן על קבצי השרת
+app.use(express.static('public'));
 
+// ── 7. ERROR HANDLING & REDIRECTS ──
 app.use((req, res) => {
-    res.status(404).json({ error: "Not Found", message: "The requested resource or route does not exist." });
+    // אם המשתמש ניסה לגשת ל-API לא קיים, נחזיר JSON
+    if (req.url.startsWith('/api')) {
+        return res.status(404).json({ error: "Not Found", message: "The requested API route does not exist." });
+    }
+    // עבור כל בקשה אחרת (דפדפן), נשלח אותו לדף הדוקומנטציה הראשי ב-public
+    res.redirect('/');
 });
 
-app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).json({ error: "Server Error", message: "Internal failure. The system logs have recorded the error." });
-});
-
-app.listen(PORT, () => {
-    console.log(`✅ Server is live at: http://localhost:${PORT}`);
+// ── 8. SERVER START ──
+app.listen(PORT, "0.0.0.0", () => {
+    console.log(`✅ Server is live and reachable at port: ${PORT}`);
 });
