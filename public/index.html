@@ -89,11 +89,11 @@
         <h3>Authentication (Login)</h3>
         <p>Test credentials for demo and automation purposes:</p>
         <table>
-            <tr><th>Email</th><th>Password</th><th>Status / Expected Result</th></tr>
-            <tr><td><code>admin@test.com</code></td><td><code>admin123</code></td><td><span style="color: #f59e0b;">Admin (200 OK)</span></td></tr>
-            <tr><td><code>user1@test.com</code></td><td><code>123456</code></td><td><span style="color: #3b82f6;">User (200 OK)</span></td></tr>
-            <tr><td><code>user2@test.com</code></td><td><code>123456</code></td><td><span style="color: #3b82f6;">User (200 OK)</span></td></tr>
-            <tr><td><code>locked@test.com</code></td><td><code>123456</code></td><td><span style="color: #ef4444;">Locked (403 Forbidden)</span></td></tr>
+            <tr><th>ID</th><th>Email</th><th>Password</th><th>Status / Expected Result</th></tr>
+            <tr><td>3</td><td><code>admin@test.com</code></td><td><code>admin123</code></td><td><span style="color: #f59e0b;">Admin (200 OK)</span></td></tr>
+            <tr><td>1</td><td><code>user1@test.com</code></td><td><code>123456</code></td><td><span style="color: #3b82f6;">User (200 OK)</span></td></tr>
+            <tr><td>2</td><td><code>user2@test.com</code></td><td><code>123456</code></td><td><span style="color: #3b82f6;">User (200 OK)</span></td></tr>
+            <tr><td>4</td><td><code>locked@test.com</code></td><td><code>123456</code></td><td><span style="color: #ef4444;">Locked (403 Forbidden)</span></td></tr>
         </table>
         <h4>Response (200 OK):</h4>
         <pre>{ "id": 3, "name": "Admin User", "role": "admin" }</pre>
@@ -110,9 +110,25 @@
     <section class="endpoint post">
         <span class="method m-post">POST</span> <code>/orders</code>
         <h3>Book Tickets</h3>
-        <p>Process a new ticket reservation for a screening.</p>
-        <h4>Response:</h4>
-        <pre>{ "orderId": "ORD-99210", "status": "confirmed", "message": "Tickets booked successfully" }</pre>
+        <p>Process a new ticket reservation. Requires a valid Movie ID and User ID.</p>
+        
+        <h4>Request Body Parameters:</h4>
+        <ul>
+            <li><code>movieId</code>: The ID of the movie to book (must exist in our library).</li>
+            <li><code>userId</code>: The ID of the user placing the order.</li>
+            <li><code>quantity</code>: Number of tickets to reserve.</li>
+        </ul>
+
+        <h4>Sample Request:</h4>
+        <pre>{
+  "userId": 1,
+  "movieId": 25,
+  "quantity": 2
+}</pre>
+
+        <h4>Responses:</h4>
+        <p><strong>Success (201 Created):</strong> Tickets reserved successfully.</p>
+        <p><strong>Error (404 Not Found):</strong> Returned if the <code>movieId</code> does not exist in the database.</p>
     </section>
 
     <h2 class="section-title" style="color: var(--put);">🔵 PUT - Update Requests</h2>

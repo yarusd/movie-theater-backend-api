@@ -20,7 +20,7 @@ const requireApiKey = (req, res, next) => {
     res.status(401).json({ error: "Unauthorized", message: "Invalid or missing x-api-key header." });
 };
 
-// ── 3. VALIDATION (Joi Schema) ──
+// ── 3. VALIDATION (Joi Schema for Movies) ──
 const movieSchema = Joi.object({
     title: Joi.string().min(2).max(100).required(),
     genre: Joi.string().valid('Action', 'Horror', 'Comedy', 'Drama', 'Animation', 'Sci-Fi', 'Thriller', 'Adventure', 'Romance').required(),
@@ -105,47 +105,31 @@ let MOVIES = [
 
 let ORDERS = [];
 
-// ── 5. API ROUTES ──
-
+// ── 5. API ROUTES (GET) ──
 app.get('/api/health', (req, res) => {
-    res.json({ 
-        status: "UP", 
-        moviesCount: MOVIES.length,
-        serverTime: new Date().toISOString() 
-    });
+    res.json({ status: "UP", moviesCount: MOVIES.length, serverTime: new Date().toISOString() });
 });
 
 app.get('/api/movies', (req, res) => {
     let result = JSON.parse(JSON.stringify(MOVIES));
     const { q, genre, year, id } = req.query;
-
     if (id) result = result.filter(m => m.id === parseInt(id));
     if (genre) result = result.filter(m => m.genre.toLowerCase() === genre.toLowerCase());
     if (year) result = result.filter(m => m.year === parseInt(year));
-    if (q) {
-        result = result.filter(m => 
-            m.title.toLowerCase().includes(q.toLowerCase()) || 
-            m.description.toLowerCase().includes(q.toLowerCase())
-        );
-    }
+    if (q) result = result.filter(m => m.title.toLowerCase().includes(q.toLowerCase()) || m.description.toLowerCase().includes(q.toLowerCase()));
     res.json(result);
 });
 
+// ── 6. API ROUTES (POST) ──
 app.post('/api/register', (req, res) => {
-    res.status(201).json({
-        message: "User registered successfully",
-        userId: Math.floor(Math.random() * 1000000000)
-    });
+    res.status(201).json({ message: "User registered successfully", userId: Date.now() });
 });
 
 app.post('/api/login', (req, res) => {
     const { email, password } = req.body;
     const user = TEST_USERS.find(u => u.email === email && u.password === password);
-    
     if (user) {
-        if (user.isLocked) {
-            return res.status(403).json({ error: "Forbidden", message: "Your account is locked. Please contact support." });
-        }
+        if (user.isLocked) return res.status(403).json({ error: "Forbidden", message: "Your account is locked." });
         res.json({ id: user.id, name: user.name, email: user.email, role: user.role });
     } else {
         res.status(401).json({ error: "Unauthorized", message: "Invalid credentials" });
@@ -155,69 +139,53 @@ app.post('/api/login', (req, res) => {
 app.post('/api/movies', requireApiKey, (req, res) => {
     const { error, value } = movieSchema.validate(req.body);
     if (error) return res.status(400).json({ error: "Bad Request", message: error.details[0].message });
-
-    const newMovie = { ...value, id: Date.now(), isFeatured: false };
+    const newMovie = { ...value, id: Date.now() };
     MOVIES.push(newMovie);
     res.status(201).json(newMovie);
 });
 
 app.post('/api/orders', (req, res) => {
+    const { movieId, userId, quantity } = req.body;
+    const movieExists = MOVIES.find(m => m.id === parseInt(movieId));
+    
+    if (!movieExists) {
+        return res.status(404).json({ error: "Not Found", message: `Cannot book. Movie ID ${movieId} not found.` });
+    }
+
     const orderId = `ORD-${Math.floor(Math.random() * 100000)}`;
-    ORDERS.push({ ...req.body, orderId });
-    res.status(201).json({
-        orderId: orderId,
-        status: "confirmed",
-        message: "Tickets booked successfully"
-    });
+    ORDERS.push({ userId, movieId, quantity, orderId });
+    res.status(201).json({ orderId, status: "confirmed", message: `Tickets for '${movieExists.title}' booked successfully!` });
 });
 
+// ── 7. PUT & DELETE ──
 app.put('/api/movies/:id', requireApiKey, (req, res) => {
     const id = parseInt(req.params.id);
     const movieIndex = MOVIES.findIndex(m => m.id === id);
-
-    if (movieIndex === -1) {
-        return res.status(404).json({ error: "Not Found", message: "The requested resource or ID does not exist." });
-    }
-
+    if (movieIndex === -1) return res.status(404).json({ error: "Not Found" });
     MOVIES[movieIndex] = { ...MOVIES[movieIndex], ...req.body };
-    res.json({
-        message: "Movie updated successfully",
-        updatedFields: req.body
-    });
+    res.json({ message: "Updated", updatedFields: req.body });
 });
 
 app.delete('/api/movies/:id', requireApiKey, (req, res) => {
     const id = parseInt(req.params.id);
     const movieIndex = MOVIES.findIndex(m => m.id === id);
-
     if (movieIndex !== -1) {
         MOVIES.splice(movieIndex, 1);
-        res.json({ "message": "Movie deleted successfully" });
+        res.json({ message: "Deleted" });
     } else {
-        res.status(404).json({ error: "Not Found", message: "The requested resource or ID does not exist." });
+        res.status(404).json({ error: "Not Found" });
     }
 });
 
-app.delete('/api/test/reset', requireApiKey, (req, res) => {
-    ORDERS = [];
-    res.json({ success: true, message: "Database reset completed" });
-});
-
-// ── 6. SERVING STATIC FILES (The Documentation) ──
-// אנחנו משתמשים בתיקיית public כדי להגן על קבצי השרת
+// ── 8. SERVING STATIC FILES (The Portal) ──
 app.use(express.static('public'));
 
-// ── 7. ERROR HANDLING & REDIRECTS ──
+// ── 9. FINAL ERROR HANDLING ──
 app.use((req, res) => {
-    // אם המשתמש ניסה לגשת ל-API לא קיים, נחזיר JSON
-    if (req.url.startsWith('/api')) {
-        return res.status(404).json({ error: "Not Found", message: "The requested API route does not exist." });
-    }
-    // עבור כל בקשה אחרת (דפדפן), נשלח אותו לדף הדוקומנטציה הראשי ב-public
+    if (req.url.startsWith('/api')) return res.status(404).json({ error: "API Route Not Found" });
     res.redirect('/');
 });
 
-// ── 8. SERVER START ──
 app.listen(PORT, "0.0.0.0", () => {
-    console.log(`✅ Server is live and reachable at port: ${PORT}`);
+    console.log(`✅ Server live at: http://localhost:${PORT}`);
 });
