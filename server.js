@@ -10,6 +10,7 @@ const PORT = process.env.PORT || 3001;
 // ── MIDDLEWARES ──
 app.use(cors());
 app.use(bodyParser.json());
+// Serving the documentation (index.html) as the root page
 app.use(express.static('.'));
 
 // ── 1. SECURITY (API Key) ──
@@ -33,11 +34,12 @@ const movieSchema = Joi.object({
     cast: Joi.array().items(Joi.string()).default([])
 });
 
-// ── 3. DATA (Full 60 Movies) ──
+// ── 3. DATA (Users & 60 Movies) ──
 let TEST_USERS = [
-    { id: 1, email: "user1@test.com", password: "123456", name: "Alice Cohen", role: "user" },
-    { id: 2, email: "user2@test.com", password: "123456", name: "Bob Levi", role: "user" },
-    { id: 3, email: "admin@test.com", password: "admin123", name: "Admin User", role: "admin" },
+    { id: 1, email: "user1@test.com", password: "123456", name: "Alice Cohen", role: "user", isLocked: false },
+    { id: 2, email: "user2@test.com", password: "123456", name: "Bob Levi", role: "user", isLocked: false },
+    { id: 3, email: "admin@test.com", password: "admin123", name: "Admin User", role: "admin", isLocked: false },
+    { id: 4, email: "locked@test.com", password: "123456", name: "Locked User", role: "user", isLocked: true }
 ];
 
 let MOVIES = [
@@ -143,7 +145,11 @@ app.post('/api/register', (req, res) => {
 app.post('/api/login', (req, res) => {
     const { email, password } = req.body;
     const user = TEST_USERS.find(u => u.email === email && u.password === password);
+    
     if (user) {
+        if (user.isLocked) {
+            return res.status(403).json({ error: "Forbidden", message: "Your account is locked. Please contact support." });
+        }
         res.json({ id: user.id, name: user.name, email: user.email, role: user.role });
     } else {
         res.status(401).json({ error: "Unauthorized", message: "Invalid credentials" });
@@ -169,7 +175,7 @@ app.post('/api/orders', (req, res) => {
     });
 });
 
-// ── 6. PUT ROUTE (UPDATE) ──
+// ── 6. PUT ROUTE ──
 
 app.put('/api/movies/:id', requireApiKey, (req, res) => {
     const id = parseInt(req.params.id);
