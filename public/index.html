@@ -43,7 +43,6 @@
 <div class="container">
     <header>
         <h1>🎥 MovieTime API Documentation</h1>
-        <p>Project by <strong>Yarus and Tzedek Silver</strong></p>
         <div class="base-url">Base URL: https://movie-time-api.onrender.com/api</div>
     </header>
 
@@ -59,12 +58,20 @@
         <span class="method m-get">GET</span> <code>/health</code>
         <h3>System Status</h3>
         <p>Monitors server availability and returns database statistics.</p>
+        <h4>Response:</h4>
+        <pre>{ "status": "UP", "moviesCount": 60, "serverTime": "2026-03-24T21:49:12Z" }</pre>
     </section>
 
     <section class="endpoint get">
         <span class="method m-get">GET</span> <code>/movies</code>
-        <h3>Get All Movies & Filtering</h3>
-        <p>Fetches the movie library. Supports dynamic query parameters.</p>
+        <h3>Get All Movies</h3>
+        <p>Fetches the complete library of movies currently stored in the system.</p>
+    </section>
+
+    <section class="endpoint get">
+        <span class="method m-get">GET</span> <code>/movies?filters</code>
+        <h3>Movie Filtering & Searching</h3>
+        <p>Supports dynamic query parameters to filter results or search for specific content.</p>
         <table>
             <tr><th>Query Parameter</th><th>Type</th><th>Usage</th></tr>
             <tr><td><code>id</code></td><td>Integer</td><td>Filter by unique ID</td></tr>
@@ -110,16 +117,9 @@
     <section class="endpoint post">
         <span class="method m-post">POST</span> <code>/orders</code>
         <h3>Book Tickets</h3>
-        <p>Process a new ticket reservation. Requires a valid Movie ID and User ID.</p>
+        <p>Process a new ticket reservation. Requires a valid <strong>movieId</strong>, <strong>userId</strong>, and <strong>quantity</strong>.</p>
         
-        <h4>Request Body Parameters:</h4>
-        <ul>
-            <li><code>movieId</code>: The ID of the movie to book (must exist in our library).</li>
-            <li><code>userId</code>: The ID of the user placing the order.</li>
-            <li><code>quantity</code>: Number of tickets to reserve.</li>
-        </ul>
-
-        <h4>Sample Request:</h4>
+        <h4>Request Body Body:</h4>
         <pre>{
   "userId": 1,
   "movieId": 25,
@@ -127,8 +127,11 @@
 }</pre>
 
         <h4>Responses:</h4>
-        <p><strong>Success (201 Created):</strong> Tickets reserved successfully.</p>
-        <p><strong>Error (404 Not Found):</strong> Returned if the <code>movieId</code> does not exist in the database.</p>
+        <p><strong>Success (201 Created):</strong> Returns confirmed order details.</p>
+        <p><strong>Error (404 Not Found):</strong> Returned if the provided <code>movieId</code> does not exist in the library.</p>
+        
+        <h4>Example Success Response:</h4>
+        <pre>{ "orderId": "ORD-99210", "status": "confirmed", "message": "Tickets for 'Gladiator II' booked successfully!" }</pre>
     </section>
 
     <h2 class="section-title" style="color: var(--put);">🔵 PUT - Update Requests</h2>
@@ -168,7 +171,7 @@
     </table>
 
     <div class="footer">
-        &copy; 2026 MovieTime API | <strong>Yarus and Tzedek Silver</strong>
+        &copy; MovieTime API | <strong>YT</strong>
     </div>
 </div>
 
