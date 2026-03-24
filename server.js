@@ -1,10 +1,11 @@
-require('dotenv').config(); // טעינת משתני סביבה
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 
 const app = express();
-const PORT = 3001;
+// התיקון כאן: שימוש בפורט דינמי עבור Render
+const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(bodyParser.json());
@@ -16,14 +17,14 @@ const SECRET_API_KEY = process.env.API_KEY || "my-temp-key";
 const requireApiKey = (req, res, next) => {
     const apiKey = req.headers['x-api-key'];
     if (apiKey && apiKey === SECRET_API_KEY) {
-        next(); // המפתח תקין, ממשיכים הלאה
+        next();
     } else {
         res.status(401).json({ error: 'Unauthorized: Invalid or missing API Key' });
     }
 };
 // ────────────────────────────────────────────────────────
 
-// ── DATA (The 60 Movies are here) ─────────────────────
+// ── DATA (Movies List) ────────────────────────────────
 let TEST_USERS = [
   { id: 1, email: "user1@test.com", password: "123456", name: "Alice Cohen", role: "user", locked: false },
   { id: 2, email: "user2@test.com", password: "123456", name: "Bob Levi", role: "user", locked: false },
@@ -98,91 +99,52 @@ let ORDERS = [];
 let SEATS = {};
 let FAVS = {};
 
-// ── 1. HEALTH CHECK ──────────
 app.get('/api/health', (req, res) => {
-  res.json({
-    status: "UP",
-    timestamp: new Date().toISOString(),
-    moviesCount: MOVIES.length
-  });
+  res.json({ status: "UP", timestamp: new Date().toISOString(), moviesCount: MOVIES.length });
 });
 
-// ── 2. MOVIES (Filtering & Multi-Value Support) ────────
 app.get('/api/movies', (req, res) => {
   const { q, genre, search, category, userId } = req.query;
-
-  const ensureArray = (val) => {
-    if (!val) return [];
-    return Array.isArray(val) ? val : [val];
-  };
-
+  const ensureArray = (val) => { if (!val) return []; return Array.isArray(val) ? val : [val]; };
   let result = JSON.parse(JSON.stringify(MOVIES));
-
   const userIds = ensureArray(userId).map(id => parseInt(id));
   if (userIds.length > 0) {
     result = result.filter(m => m.userRatings && m.userRatings.some(r => userIds.includes(r.userId)));
-    result = result.map(m => ({
-      ...m,
-      userRatings: m.userRatings.filter(r => userIds.includes(r.userId))
-    }));
+    result = result.map(m => ({ ...m, userRatings: m.userRatings.filter(r => userIds.includes(r.userId)) }));
   }
-
   const genres = ensureArray(genre || category).map(g => g.toLowerCase());
-  if (genres.length > 0 && !genres.includes('all')) {
-    result = result.filter(m => genres.includes(m.genre.toLowerCase()));
-  }
-
+  if (genres.length > 0 && !genres.includes('all')) { result = result.filter(m => genres.includes(m.genre.toLowerCase())); }
   const keywords = ensureArray(q || search).map(k => k.toLowerCase());
   if (keywords.length > 0) {
     result = result.filter(m => {
-      const content = (
-        m.title + " " +
-        m.description + " " +
-        (m.cast ? m.cast.join(" ") : "") + " " +
-        m.genre
-      ).toLowerCase();
+      const content = (m.title + " " + m.description + " " + (m.cast ? m.cast.join(" ") : "") + " " + m.genre).toLowerCase();
       return keywords.some(key => content.includes(key));
     });
   }
-
   res.json(result);
 });
 
-// ── 3. CRUD, AUTH, ORDERS, FAVS & RESET ─────────────────
-
-// GET פתוח לכולם - קורה למעלה בנתיב /api/movies
-
-// POST מוגן - הוספת סרט (דורש מפתח API)
 app.post('/api/movies', requireApiKey, (req, res) => {
   const newMovie = { ...req.body, id: Date.now(), userRatings: [], isFeatured: false };
   MOVIES.push(newMovie);
   res.status(201).json(newMovie);
 });
 
-// DELETE מוגן - מחיקת סרט (דורש מפתח API) - הוספנו עכשיו!
 app.delete('/api/movies/:id', requireApiKey, (req, res) => {
   const id = parseInt(req.params.id);
   const initialLength = MOVIES.length;
-  
   MOVIES = MOVIES.filter(m => m.id !== id);
-  
-  if (MOVIES.length < initialLength) {
-    res.json({ message: 'Movie deleted successfully' });
-  } else {
-    res.status(404).json({ error: 'Movie not found' });
-  }
+  if (MOVIES.length < initialLength) { res.json({ message: 'Movie deleted successfully' }); } 
+  else { res.status(404).json({ error: 'Movie not found' }); }
 });
 
-// נתיבים פתוחים נוספים (Login, Orders, Reset)
 app.post('/api/login', (req, res) => {
   const { email, password } = req.body;
   const user = TEST_USERS.find(u => u.email === email && u.password === password);
   if (user) {
     if (user.locked) return res.status(403).json({ error: "Account locked" });
     res.json({ id: user.id, email: user.email, name: user.name, role: user.role });
-  } else {
-    res.status(401).json({ error: "Invalid credentials" });
-  }
+  } else { res.status(401).json({ error: "Invalid credentials" }); }
 });
 
 app.post('/api/orders', (req, res) => {
