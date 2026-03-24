@@ -4,7 +4,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 
 const app = express();
-// התיקון כאן: שימוש בפורט דינמי עבור Render
+// פורט דינמי עבור Render או 3001 למחשב המקומי
 const PORT = process.env.PORT || 3001;
 
 app.use(cors());
@@ -24,7 +24,7 @@ const requireApiKey = (req, res, next) => {
 };
 // ────────────────────────────────────────────────────────
 
-// ── DATA (Movies List) ────────────────────────────────
+// ── DATA (Movies, Users, Orders) ──────────────────────
 let TEST_USERS = [
   { id: 1, email: "user1@test.com", password: "123456", name: "Alice Cohen", role: "user", locked: false },
   { id: 2, email: "user2@test.com", password: "123456", name: "Bob Levi", role: "user", locked: false },
@@ -97,33 +97,56 @@ let MOVIES = [
 
 let ORDERS = [];
 let SEATS = {};
-let FAVS = {};
 
+// ── 1. HEALTH CHECK ──────────
 app.get('/api/health', (req, res) => {
   res.json({ status: "UP", timestamp: new Date().toISOString(), moviesCount: MOVIES.length });
 });
 
+// ── 2. GET ALL MOVIES (Dynamic Filtering) ────────
 app.get('/api/movies', (req, res) => {
-  const { q, genre, search, category, userId } = req.query;
-  const ensureArray = (val) => { if (!val) return []; return Array.isArray(val) ? val : [val]; };
   let result = JSON.parse(JSON.stringify(MOVIES));
-  const userIds = ensureArray(userId).map(id => parseInt(id));
-  if (userIds.length > 0) {
-    result = result.filter(m => m.userRatings && m.userRatings.some(r => userIds.includes(r.userId)));
-    result = result.map(m => ({ ...m, userRatings: m.userRatings.filter(r => userIds.includes(r.userId)) }));
-  }
-  const genres = ensureArray(genre || category).map(g => g.toLowerCase());
-  if (genres.length > 0 && !genres.includes('all')) { result = result.filter(m => genres.includes(m.genre.toLowerCase())); }
-  const keywords = ensureArray(q || search).map(k => k.toLowerCase());
-  if (keywords.length > 0) {
-    result = result.filter(m => {
-      const content = (m.title + " " + m.description + " " + (m.cast ? m.cast.join(" ") : "") + " " + m.genre).toLowerCase();
-      return keywords.some(key => content.includes(key));
-    });
-  }
+  const query = req.query;
+
+  Object.keys(query).forEach(key => {
+    const value = query[key];
+    if (!value) return;
+
+    if (key === 'q' || key === 'search') {
+      result = result.filter(m => 
+        m.title.toLowerCase().includes(value.toLowerCase()) || 
+        m.description.toLowerCase().includes(value.toLowerCase())
+      );
+    } 
+    else if (MOVIES.length > 0 && MOVIES[0].hasOwnProperty(key)) {
+      result = result.filter(m => {
+        const itemValue = m[key];
+        if (Array.isArray(itemValue)) {
+          return itemValue.some(v => v.toString().toLowerCase().includes(value.toLowerCase()));
+        }
+        if (typeof itemValue === 'number') {
+          return itemValue === Number(value);
+        }
+        if (typeof itemValue === 'boolean') {
+          return itemValue === (value.toLowerCase() === 'true');
+        }
+        return itemValue.toString().toLowerCase() === value.toLowerCase();
+      });
+    }
+  });
+
   res.json(result);
 });
 
+// ── 3. GET SINGLE MOVIE (Path Param) ────────
+app.get('/api/movies/:id', (req, res) => {
+  const id = parseInt(req.params.id);
+  const movie = MOVIES.find(m => m.id === id);
+  if (movie) res.json(movie);
+  else res.status(404).json({ error: 'Movie not found' });
+});
+
+// ── 4. PROTECTED ACTIONS (POST/DELETE) ────────
 app.post('/api/movies', requireApiKey, (req, res) => {
   const newMovie = { ...req.body, id: Date.now(), userRatings: [], isFeatured: false };
   MOVIES.push(newMovie);
@@ -134,29 +157,28 @@ app.delete('/api/movies/:id', requireApiKey, (req, res) => {
   const id = parseInt(req.params.id);
   const initialLength = MOVIES.length;
   MOVIES = MOVIES.filter(m => m.id !== id);
-  if (MOVIES.length < initialLength) { res.json({ message: 'Movie deleted successfully' }); } 
-  else { res.status(404).json({ error: 'Movie not found' }); }
+  if (MOVIES.length < initialLength) res.json({ message: 'Movie deleted successfully' });
+  else res.status(404).json({ error: 'Movie not found' });
 });
 
+// ── 5. AUTH & ORDERS ────────
 app.post('/api/login', (req, res) => {
   const { email, password } = req.body;
   const user = TEST_USERS.find(u => u.email === email && u.password === password);
   if (user) {
     if (user.locked) return res.status(403).json({ error: "Account locked" });
     res.json({ id: user.id, email: user.email, name: user.name, role: user.role });
-  } else { res.status(401).json({ error: "Invalid credentials" }); }
+  } else res.status(401).json({ error: "Invalid credentials" });
 });
 
 app.post('/api/orders', (req, res) => {
   const order = { ...req.body, id: Date.now(), status: "confirmed", created: new Date().toISOString() };
   ORDERS.push(order);
-  const k = `${order.movieId}_${order.date}_${order.time}`;
-  SEATS[k] = [...(SEATS[k] || []), ...order.seats];
   res.status(201).json(order);
 });
 
 app.post('/api/test/reset', (req, res) => {
-  ORDERS = []; SEATS = {}; FAVS = {};
+  ORDERS = []; SEATS = {};
   res.send({ success: true });
 });
 
