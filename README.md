@@ -1,5 +1,4 @@
 # 🎥 MovieTime API | Professional QA & Backend Project
-### Created by Yarus and Tzedek Silver
 
 A robust, production-ready REST API for cinema management, featuring 60+ movies, dynamic searching, and secure booking logic. This project is designed specifically to showcase **QA Automation** and **Backend Development** standards.
 
