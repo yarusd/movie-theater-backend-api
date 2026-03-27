@@ -24,7 +24,6 @@
         .api-key-badge { background: #ef4444; color: white; font-size: 0.75rem; padding: 3px 10px; border-radius: 4px; margin-left: 10px; vertical-align: middle; font-weight: 800; }
         pre { background: #000; padding: 20px; border-radius: 8px; overflow-x: auto; color: #34d399; font-size: 0.95rem; border: 1px solid #334155; margin-top: 15px; }
         code { color: #f472b6; font-family: 'Courier New', monospace; }
-        h4 { margin: 20px 0 10px; color: var(--accent); text-transform: uppercase; font-size: 0.8rem; }
         table { width: 100%; border-collapse: collapse; margin: 25px 0; background: rgba(0,0,0,0.4); border-radius: 8px; overflow: hidden; }
         th, td { padding: 18px; border-bottom: 1px solid #334155; text-align: left; }
         th { background: #475569; color: white; text-transform: uppercase; font-size: 0.85rem; }
@@ -41,8 +40,7 @@
 
     <div class="auth-section">
         <h3>🔐 Authentication & Security</h3>
-        <p>Operations marked with <span class="api-key-badge">API KEY</span> require the following header:</p>
-        <code>x-api-key: [YOUR_PRIVATE_KEY]</code>
+        <p>Operations marked with <span class="api-key-badge">API KEY</span> require the header: <code>x-api-key: [YOUR_PRIVATE_KEY]</code></p>
     </div>
 
     <h2 class="section-title" style="color: var(--get);">🟢 GET - Retrieval Requests</h2>
@@ -50,15 +48,25 @@
     <section class="endpoint get">
         <span class="method m-get">GET</span> <code>/health</code>
         <h3>System Status</h3>
-        <p>Monitors server availability and returns database statistics.</p>
-        <h4>Response:</h4>
         <pre>{ "status": "UP", "moviesCount": 60, "serverTime": "2026-03-24T21:49:12Z" }</pre>
     </section>
 
     <section class="endpoint get">
         <span class="method m-get">GET</span> <code>/movies</code>
         <h3>Get All Movies</h3>
-        <p>Fetches the complete library of movies currently stored in the system.</p>
+        <p>Fetches the complete library of movies.</p>
+    </section>
+
+    <section class="endpoint get">
+        <span class="method m-get">GET</span> <code>/movies?filters</code>
+        <h3>Movie Filtering & Search</h3>
+        <table>
+            <tr><th>Query Parameter</th><th>Type</th><th>Usage Example</th></tr>
+            <tr><td><code>id</code></td><td>Integer</td><td><code>/movies?id=25</code></td></tr>
+            <tr><td><code>q</code></td><td>String</td><td><code>/movies?q=Gladiator</code></td></tr>
+            <tr><td><code>genre</code></td><td>String</td><td><code>/movies?genre=Action</code></td></tr>
+            <tr><td><code>year</code></td><td>Integer</td><td><code>/movies?year=2024</code></td></tr>
+        </table>
     </section>
 
     <h2 class="section-title" style="color: var(--post);">🟡 POST - Create Requests</h2>
@@ -66,37 +74,47 @@
     <section class="endpoint post">
         <span class="method m-post">POST</span> <code>/register</code>
         <h3>User Registration</h3>
-        <p>Register a new account. Name must contain only letters. Password: 6-20 characters.</p>
+        <p>Register new account. Mandatory: <strong>name</strong>, <strong>email</strong>, <strong>password</strong>, <strong>password_confirmation</strong>.</p>
         <h4>Request Body:</h4>
         <pre>{
   "name": "John Doe",
   "email": "john@example.com",
-  "password": "password123"
+  "password": "password123",
+  "password_confirmation": "password123"
 }</pre>
-        <h4>Response:</h4>
-        <pre>{ "message": "User registered successfully", "userId": 1711234567 }</pre>
     </section>
 
     <section class="endpoint post">
         <span class="method m-post">POST</span> <code>/login</code>
         <h3>Authentication (Login)</h3>
-        <p>Verify credentials to receive a user profile. Mandatory fields: <strong>email</strong>, <strong>password</strong>.</p>
+        <h4>Test Credentials:</h4>
         <table>
             <tr><th>Email</th><th>Password</th><th>Expected Result</th></tr>
             <tr><td><code>admin@test.com</code></td><td><code>admin123</code></td><td><span style="color: #f59e0b;">Admin (200 OK)</span></td></tr>
-            <tr><td><code>user1@test.com</code></td><td><code>123456</code></td><td><span style="color: #3b82f6;">User (200 OK)</span></td></tr>
+            <tr><td><code>user1@test.com</code></td><td><code>123456</code></td><td><span style="color: #3b82f6;">User 1 (200 OK)</span></td></tr>
+            <tr><td><code>user2@test.com</code></td><td><code>123456</code></td><td><span style="color: #3b82f6;">User 2 (200 OK)</span></td></tr>
             <tr><td><code>locked@test.com</code></td><td><code>123456</code></td><td><span style="color: #ef4444;">Locked (403 Forbidden)</span></td></tr>
         </table>
-        <h4>Response (200 OK):</h4>
+        <h4>Response:</h4>
         <pre>{ "id": 3, "name": "Admin User", "email": "admin@test.com", "role": "admin" }</pre>
     </section>
 
     <section class="endpoint post">
         <span class="method m-post">POST</span> <code>/movies</code> <span class="api-key-badge">API KEY</span>
         <h3>Create New Movie</h3>
-        <p>Add a new entry to the catalog. Mandatory fields: <strong>Title</strong> (max 60), <strong>Genre</strong>, <strong>Duration</strong>.</p>
-        <h4>Response:</h4>
-        <pre>{ "id": 1711234888, "title": "Gladiator II", "genre": "Action", "duration": 148 }</pre>
+        <pre>{ "id": 12345, "title": "Gladiator II", "genre": "Action", "duration": 148 }</pre>
+    </section>
+
+    <section class="endpoint post">
+        <span class="method m-post">POST</span> <code>/orders</code>
+        <h3>Book Tickets</h3>
+        <p>Process ticket reservation. <strong>Quantity limit: Max 8.</strong></p>
+        <h4>Request Body:</h4>
+        <pre>{
+  "userId": 1,
+  "movieId": 25,
+  "quantity": 5
+}</pre>
     </section>
 
     <h2 class="section-title" style="color: var(--put);">🔵 PUT - Update Requests</h2>
@@ -104,8 +122,6 @@
     <section class="endpoint put">
         <span class="method m-put">PUT</span> <code>/movies/:id</code> <span class="api-key-badge">API KEY</span>
         <h3>Modify Movie Data</h3>
-        <p>Update existing metadata using its unique ID.</p>
-        <h4>Response:</h4>
         <pre>{ "message": "Movie updated successfully", "updatedFields": { "rating": 9.2 } }</pre>
     </section>
 
@@ -114,27 +130,24 @@
     <section class="endpoint delete">
         <span class="method m-delete">DELETE</span> <code>/movies/:id</code> <span class="api-key-badge">API KEY</span>
         <h3>Remove Movie</h3>
-        <p>Permanently delete a record using its ID.</p>
-        <h4>Response:</h4>
         <pre>{ "message": "Movie deleted successfully" }</pre>
     </section>
 
     <section class="endpoint delete">
         <span class="method m-delete">DELETE</span> <code>/test/reset</code> <span class="api-key-badge">API KEY</span>
         <h3>Database Reset</h3>
-        <p>QA tool to reset the database to its initial state for fresh testing sessions.</p>
-        <h4>Response:</h4>
+        <p>Resets movies and users to initial state.</p>
         <pre>{ "message": "Database reset to initial state successfully." }</pre>
     </section>
 
     <h2 class="section-title">📊 Response Status Standards</h2>
     <table>
         <tr><th>Code</th><th>Label</th><th>Description</th></tr>
-        <tr><td><code>200 / 201</code></td><td>Success</td><td>Operation completed successfully.</td></tr>
-        <tr><td><code>400</code></td><td>Bad Request</td><td>Validation failed (Joi). Check request body.</td></tr>
-        <tr><td><code>401</code></td><td>Unauthorized</td><td>Missing or invalid x-api-key header.</td></tr>
-        <tr><td><code>403</code></td><td>Forbidden</td><td>User account is locked or restricted.</td></tr>
-        <tr><td><code>404</code></td><td>Not Found</td><td>The resource or ID does not exist.</td></tr>
+        <tr><td><code>200 / 201</code></td><td>Success</td><td>Operation completed.</td></tr>
+        <tr><td><code>400</code></td><td>Bad Request</td><td>Validation failed.</td></tr>
+        <tr><td><code>401</code></td><td>Unauthorized</td><td>Invalid x-api-key.</td></tr>
+        <tr><td><code>403</code></td><td>Forbidden</td><td>Account locked.</td></tr>
+        <tr><td><code>404</code></td><td>Not Found</td><td>Resource not found.</td></tr>
     </table>
 
     <div class="footer">
