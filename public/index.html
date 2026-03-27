@@ -103,15 +103,15 @@
             <tr><td>4</td><td><code>locked@test.com</code></td><td><code>123456</code></td><td><span style="color: #ef4444;">Locked (403 Forbidden)</span></td></tr>
         </table>
         <h4>Response (200 OK):</h4>
-        <pre>{ "id": 3, "name": "Admin User", "role": "admin" }</pre>
+        <pre>{ "id": 3, "name": "Admin User", "email": "admin@test.com", "role": "admin" }</pre>
     </section>
 
     <section class="endpoint post">
         <span class="method m-post">POST</span> <code>/movies</code> <span class="api-key-badge">API KEY</span>
         <h3>Create New Movie</h3>
-        <p>Add a new entry to the catalog. Validated via Joi.</p>
+        <p>Add a new entry to the catalog. Validated via Joi. Mandatory fields: <strong>Title</strong>, <strong>Genre</strong>, <strong>Duration</strong>.</p>
         <h4>Response:</h4>
-        <pre>{ "id": 1711234888, "title": "Gladiator II", "genre": "Action" }</pre>
+        <pre>{ "id": 1711234888, "title": "Gladiator II", "genre": "Action", "duration": 148 }</pre>
     </section>
 
     <section class="endpoint post">
@@ -119,7 +119,7 @@
         <h3>Book Tickets</h3>
         <p>Process a new ticket reservation. Requires a valid <strong>movieId</strong>, <strong>userId</strong>, and <strong>quantity</strong>.</p>
         
-        <h4>Request Body Body:</h4>
+        <h4>Request Body:</h4>
         <pre>{
   "userId": 1,
   "movieId": 25,
@@ -157,7 +157,9 @@
     <section class="endpoint delete">
         <span class="method m-delete">DELETE</span> <code>/test/reset</code> <span class="api-key-badge">API KEY</span>
         <h3>Database Reset</h3>
-        <p>QA tool to clear all orders for fresh testing sessions.</p>
+        <p>QA tool to reset the database to its initial state for fresh testing sessions.</p>
+        <h4>Response:</h4>
+        <pre>{ "message": "Database reset to initial state successfully." }</pre>
     </section>
 
     <h2 class="section-title">📊 Response Status Standards</h2>

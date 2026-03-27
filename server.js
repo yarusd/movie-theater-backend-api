@@ -22,25 +22,21 @@ const requireApiKey = (req, res, next) => {
 
 // ── 3. VALIDATION (Joi Schema for Movies) ──
 const movieSchema = Joi.object({
-    title: Joi.string().min(2).max(100).required(),
+    // שדות חובה (Required) - "שנה" הוסרה מהחובה
+    title: Joi.string().min(2).max(60).required(),
     genre: Joi.string().valid('Action', 'Horror', 'Comedy', 'Drama', 'Animation', 'Sci-Fi', 'Thriller', 'Adventure', 'Romance').required(),
-    year: Joi.number().integer().min(1900).max(2030).required(),
     duration: Joi.number().positive().required(),
-    rating: Joi.number().min(0).max(10).default(0),
-    description: Joi.string().max(500).allow(''),
-    poster: Joi.string().uri().allow(''),
-    cast: Joi.array().items(Joi.string()).default([])
+    
+    // שדות אופציונליים (Optional)
+    year: Joi.number().integer().min(1900).max(2030).optional(),
+    rating: Joi.number().min(0).max(10).optional().default(0),
+    description: Joi.string().max(500).allow('').optional().default('No description available.'),
+    poster: Joi.string().uri().allow('').optional().default('https://via.placeholder.com/300x450?text=No+Poster'),
+    cast: Joi.array().items(Joi.string()).optional().default([])
 });
 
-// ── 4. DATA (Users & 60 Movies) ──
-let TEST_USERS = [
-    { id: 1, email: "user1@test.com", password: "123456", name: "Alice Cohen", role: "user", isLocked: false },
-    { id: 2, email: "user2@test.com", password: "123456", name: "Bob Levi", role: "user", isLocked: false },
-    { id: 3, email: "admin@test.com", password: "admin123", name: "Admin User", role: "admin", isLocked: false },
-    { id: 4, email: "locked@test.com", password: "123456", name: "Locked User", role: "user", isLocked: true }
-];
-
-let MOVIES = [
+// ── 4. DATA (Initial State) ──
+const INITIAL_MOVIES = [
     { id: 1, title: "ThunderBolts", genre: "Action", rating: 7.6, duration: 126, poster: "https://th.bing.com/th/id/OSK.LWtWrR_OOJVN9Rduc088CfthZngBF_jSBCYsv7YvV3g?o=7rm=3&rs=1&pid=ImgDetMain", description: "A ragtag group of antiheroes...", cast: ["Florence Pugh", "Sebastian Stan"], year: 2025, isFeatured: false },
     { id: 2, title: "Mission: Impossible — The Final Reckoning", genre: "Action", rating: 8.1, duration: 169, poster: "https://image.tmdb.org/t/p/w500/iKPsC9EFUafRP9SrUznI61getVP.jpg", description: "Ethan Hunt's final mission.", cast: ["Tom Cruise"], year: 2025, isFeatured: false },
     { id: 3, title: "Sinners", genre: "Horror", rating: 7.9, duration: 137, poster: "https://picsum.photos/seed/Sinners3/300/450", description: "Twin brothers in Mississippi.", cast: ["Michael B. Jordan"], year: 2025, isFeatured: false },
@@ -81,7 +77,7 @@ let MOVIES = [
     { id: 38, title: "Ballerina", genre: "Action", rating: 7.4, duration: 120, poster: "https://picsum.photos/seed/Ballerina38/300/450", description: "John Wick universe vengeance.", cast: ["Ana de Armas"], year: 2025, isFeatured: false },
     { id: 39, title: "How to Train Your Dragon", genre: "Adventure", rating: 7.8, duration: 110, poster: "https://picsum.photos/seed/HowtoTrainYourDragon39/300/450", description: "Live-action Viking bond.", cast: ["Mason Thames"], year: 2025, isFeatured: false },
     { id: 40, title: "Mickey 17", genre: "Sci-Fi", rating: 7.1, duration: 137, poster: "https://picsum.photos/seed/Mickey1740/300/450", description: "Expendable worker reprinted.", cast: ["Robert Pattinson"], year: 2025, isFeatured: false },
-    { id: 41, title: "Mission: Impossible 8", genre: "Action", rating: 0, duration: 163, poster: "https://picsum.photos/seed/MI8/300/450", description: "AI Entity threat.", cast: ["Tom Cruise"], year: 2025, isFeatured: false },
+    { id: 41, title: "Mission: Impossible 8 — dead reckoning part two", genre: "Action", rating: 0, duration: 163, poster: "https://picsum.photos/seed/MI8/300/450", description: "AI Entity threat.", cast: ["Tom Cruise"], year: 2025, isFeatured: false },
     { id: 42, title: "Zootopia 2", genre: "Animation", rating: 0, duration: 108, poster: "https://picsum.photos/seed/Z2/300/450", description: "Judy and Nick return.", cast: ["Jason Bateman"], year: 2025, isFeatured: false },
     { id: 43, title: "The Running Man", genre: "Sci-Fi", rating: 0, duration: 118, poster: "https://picsum.photos/seed/TRM/300/450", description: "Dystopian TV game show.", cast: ["Glen Powell"], year: 2025, isFeatured: false },
     { id: 44, title: "Freakier Friday", genre: "Comedy", rating: 0, duration: 105, poster: "https://picsum.photos/seed/FF/300/450", description: "Body swap chaos again.", cast: ["Lindsay Lohan"], year: 2025, isFeatured: false },
@@ -103,6 +99,14 @@ let MOVIES = [
     { id: 60, title: "Love Lies Bleeding", genre: "Thriller", rating: 7.3, duration: 104, poster: "https://picsum.photos/seed/LoveLiesBleeding60/300/450", description: "Gym manager drifter romance.", cast: ["Kristen Stewart"], year: 2024, isFeatured: false }
 ];
 
+let TEST_USERS = [
+    { id: 1, email: "user1@test.com", password: "123456", name: "Alice Cohen", role: "user", isLocked: false },
+    { id: 2, email: "user2@test.com", password: "123456", name: "Bob Levi", role: "user", isLocked: false },
+    { id: 3, email: "admin@test.com", password: "admin123", name: "Admin User", role: "admin", isLocked: false },
+    { id: 4, email: "locked@test.com", password: "123456", name: "Locked User", role: "user", isLocked: true }
+];
+
+let MOVIES = JSON.parse(JSON.stringify(INITIAL_MOVIES));
 let ORDERS = [];
 
 // ── 5. API ROUTES (GET) ──
@@ -136,12 +140,28 @@ app.post('/api/login', (req, res) => {
     }
 });
 
+// Create Movie (POST)
 app.post('/api/movies', requireApiKey, (req, res) => {
     const { error, value } = movieSchema.validate(req.body);
     if (error) return res.status(400).json({ error: "Bad Request", message: error.details[0].message });
+    
     const newMovie = { ...value, id: Date.now() };
     MOVIES.push(newMovie);
-    res.status(201).json(newMovie);
+    
+    // החזרת שדות ספציפיים לפי הדרישה
+    res.status(201).json({
+        id: newMovie.id,
+        title: newMovie.title,
+        genre: newMovie.genre,
+        duration: newMovie.duration
+    });
+});
+
+// איפוס מסד הנתונים (Reset) - מעודכן ל-DELETE לפי הדוקומנטציה
+app.delete('/api/test/reset', requireApiKey, (req, res) => {
+    MOVIES = JSON.parse(JSON.stringify(INITIAL_MOVIES));
+    ORDERS = [];
+    res.json({ message: "Database reset to initial state successfully." });
 });
 
 app.post('/api/orders', (req, res) => {
@@ -162,8 +182,13 @@ app.put('/api/movies/:id', requireApiKey, (req, res) => {
     const id = parseInt(req.params.id);
     const movieIndex = MOVIES.findIndex(m => m.id === id);
     if (movieIndex === -1) return res.status(404).json({ error: "Not Found" });
+    
     MOVIES[movieIndex] = { ...MOVIES[movieIndex], ...req.body };
-    res.json({ message: "Updated", updatedFields: req.body });
+    
+    res.json({ 
+        message: "Movie updated successfully", 
+        updatedFields: req.body 
+    });
 });
 
 app.delete('/api/movies/:id', requireApiKey, (req, res) => {
@@ -171,13 +196,13 @@ app.delete('/api/movies/:id', requireApiKey, (req, res) => {
     const movieIndex = MOVIES.findIndex(m => m.id === id);
     if (movieIndex !== -1) {
         MOVIES.splice(movieIndex, 1);
-        res.json({ message: "Deleted" });
+        res.json({ message: "Movie deleted successfully" });
     } else {
         res.status(404).json({ error: "Not Found" });
     }
 });
 
-// ── 8. SERVING STATIC FILES (The Portal) ──
+// ── 8. SERVING STATIC FILES ──
 app.use(express.static('public'));
 
 // ── 9. FINAL ERROR HANDLING ──
