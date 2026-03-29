@@ -211,13 +211,32 @@ app.post('/api/movies', requireApiKey, (req, res) => {
 });
 // ── 8. ORDERS (חזר למקומו!) ──
 
+// ── 8. ORDERS (FIXED!) ──
+
 app.post('/api/orders', (req, res) => {
+    // 1. ולידציה של מבנה הנתונים (כמות, סוגי נתונים)
     const { error, value } = orderSchema.validate(req.body);
     if (error) return res.status(400).json({ error: "Bad Request", message: error.details[0].message });
 
-    const movie = MOVIES.find(m => m.id === value.movieId);
-    if (!movie) return res.status(404).json({ error: "Not Found", message: "Movie not found" });
+    // --- תיקון בעיה 1: בדיקת קיום משתמש (היה חסר!) ---
+    const user = TEST_USERS.find(u => u.id === value.userId);
+    if (!user) {
+        return res.status(401).json({ 
+            error: "Unauthorized", 
+            message: "User not found. You must be registered to book tickets." 
+        });
+    }
 
+    // --- תיקון בעיה 2: בדיקת קיום סרט ---
+    const movie = MOVIES.find(m => m.id === value.movieId);
+    if (!movie) {
+        return res.status(404).json({ 
+            error: "Not Found", 
+            message: `Movie with ID ${value.movieId} does not exist.` 
+        });
+    }
+
+    // 2. אם הכל תקין - יצירת ההזמנה
     const order = { 
         orderId: `ORD-${Date.now()}`, 
         userId: value.userId,
@@ -227,10 +246,12 @@ app.post('/api/orders', (req, res) => {
     };
     
     ORDERS.push(order);
+
     res.status(201).json({ 
         orderId: order.orderId, 
         status: order.status, 
-        message: `Tickets for '${movie.title}' booked successfully!` 
+        message: `Tickets for '${movie.title}' booked successfully!`,
+        customer: user.name // הוספנו את שם המשתמש כדי לוודא שזיהינו אותו
     });
 });
 
