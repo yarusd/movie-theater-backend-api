@@ -34,11 +34,23 @@ const movieSchema = Joi.object({
 });
 
 const registerSchema = Joi.object({
-    name: Joi.string().min(2).max(30).pattern(/^[a-zA-Zא-ת\s]+$/).required()
-        .messages({ 'string.pattern.base': 'Name must contain only letters.' }),
+    // שם: אנגלית ורווחים בלבד, 2-40 תווים
+    name: Joi.string()
+        .min(2)
+        .max(40)
+        .pattern(/^[a-zA-Z\s]+$/)
+        .required()
+        .messages({ 
+            'string.pattern.base': 'Name must contain only English letters and spaces.',
+            'string.min': 'Name must be at least 2 characters.',
+            'string.max': 'Name must not exceed 40 characters.'
+        }),
+    // אימייל: פורמט Joi סטנדרטי
     email: Joi.string().email().required(),
-    password: Joi.string().min(6).max(20).required(),
-    password_confirmation: Joi.any().valid(Joi.ref('password')).required()
+    password: Joi.string().min(6).max(50).required(),
+    password_confirmation: Joi.any()
+        .valid(Joi.ref('password'))
+        .required()
         .messages({ 'any.only': 'Passwords do not match' })
 });
 
