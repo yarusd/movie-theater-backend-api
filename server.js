@@ -103,7 +103,7 @@ const INITIAL_MOVIES = [
     { id: 38, title: "Ballerina", genre: "Action", rating: 7.4, duration: 120, year: 2025 },
     { id: 39, title: "How to Train Your Dragon", genre: "Adventure", rating: 7.8, duration: 110, year: 2025 },
     { id: 40, title: "Mickey 17", genre: "Sci-Fi", rating: 7.1, duration: 137, year: 2025 },
-    { id: 41, title: "Mission: Impossible 8", genre: "Action", rating: 0, duration: 163, year: 2025 },
+    { id: 41, title: "Mission: Impossible 8 — Dead Reckoning Part Two", genre: "Action", rating: 0, duration: 163, year: 2025 },
     { id: 42, title: "Zootopia 2", genre: "Animation", rating: 0, duration: 108, year: 2025 },
     { id: 43, title: "The Running Man", genre: "Sci-Fi", rating: 0, duration: 118, year: 2025 },
     { id: 44, title: "Freakier Friday", genre: "Comedy", rating: 0, duration: 105, year: 2025 },
@@ -174,22 +174,41 @@ app.get('/api/movies', (req, res) => {
 });
 
 app.post('/api/movies', requireApiKey, (req, res) => {
+    // 1. ולידציה מול ה-Schema (כולל הוספת ה-Defaults לתוך ה-value)
     const { error, value } = movieSchema.validate(req.body);
-    if (error) return res.status(400).json({ error: "Bad Request", message: error.details[0].message });
+    
+    if (error) {
+        return res.status(400).json({ 
+            error: "Bad Request", 
+            message: error.details[0].message 
+        });
+    }
 
-    const { title, genre, duration, ...rest } = value;
+    // 2. יצירת האובייקט המלא לשמירה ב-Database (כולל הכל)
     const newMovie = { 
         id: Date.now(),
-        title,
-        genre,
-        duration,
-        ...rest 
+        ...value 
+    };
+    MOVIES.push(newMovie);
+
+    // 3. ה-DTO: מחזירים רק את ה"ארבעה הגדולים" + מה שהמשתמש שלח במקור
+    // אנחנו מוציאים רק את השדות שבאמת מעניינים את הצד השני כרגע
+    const responseDTO = {
+        id: newMovie.id,
+        title: newMovie.title,
+        genre: newMovie.genre,
+        duration: newMovie.duration
     };
 
-    MOVIES.push(newMovie);
-    res.status(201).json(newMovie);
-});
+    // אם המשתמש שלח שדות נוספים במקור (כמו year), נוסיף אותם רק אם הם קיימים ב-req.body
+    Object.keys(req.body).forEach(key => {
+        if (!responseDTO.hasOwnProperty(key)) {
+            responseDTO[key] = value[key];
+        }
+    });
 
+    res.status(201).json(responseDTO);
+});
 // ── 8. ORDERS (חזר למקומו!) ──
 
 app.post('/api/orders', (req, res) => {
