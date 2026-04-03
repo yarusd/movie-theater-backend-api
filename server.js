@@ -289,6 +289,15 @@ app.put('/api/movies/:id', requireApiKey, (req, res) => {
     res.status(200).json({ message: "Movie updated successfully", movie: MOVIES[movieIndex] });
 });
 
+app.patch('/api/movies/:id', requireApiKey, (req, res) => {
+    const movie = MOVIES.find(m => m.id === parseInt(req.params.id));
+    if (!movie) return res.status(404).json({ error: "Movie not found" });
+    
+    // מעדכן רק את השדות שנשלחו ב-Body
+    Object.assign(movie, req.body); 
+    res.json({ message: "Fields updated successfully", movie });
+});
+
 app.delete('/api/movies/:id', requireApiKey, (req, res) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: "Bad Request", message: "ID must be a valid number" });
@@ -352,8 +361,8 @@ app.post('/api/payments/pay-existing', (req, res) => {
     
     order.paymentStatus = 'paid';
     order.totalAmount = `₪${totalAmount.toFixed(2)}`;
-    order.transactionId = `TXN-REFUND-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
-
+    order.transactionId = `TXN-PAY-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+    
     res.status(200).json({ 
         message: "Reservation successfully converted to paid order!", 
         order 
@@ -438,47 +447,6 @@ app.delete('/api/test/reset', requireApiKey, (req, res) => {
     TEST_USERS = JSON.parse(JSON.stringify(INITIAL_USERS));
     ORDERS = [];
     res.json({ message: "Database reset successfully." });
-});
-
-// ── POST: SECURE CHECKOUT WITH TIERED PRICING ──
-app.post('/api/payments/checkout', (req, res) => {
-    const { error, value } = paymentSchema.validate(req.body);
-    if (error) return res.status(400).json({ error: "Validation Failed", message: error.details[0].message });
-
-    if (isExpired(value.expiry)) {
-        return res.status(402).json({ error: "Payment Required", code: "CARD_EXPIRED", message: "הכרטיס פג תוקף" });
-    }
-
-    const isTaken = ORDERS.some(o => 
-        o.movieId === value.movieId && o.date === value.date && o.time === value.time &&
-        o.seats.some(s => value.seats.includes(s))
-    );
-    if (isTaken) return res.status(409).json({ error: "Conflict", message: "Seats already booked." });
-
-    if (value.cardNumber.startsWith("0000")) {
-        return res.status(402).json({ error: "Payment Required", code: "INSUFFICIENT_FUNDS", message: "אין מספיק יתרה בחשבון" });
-    }
-    if (value.cardNumber.startsWith("1111")) {
-        return res.status(402).json({ error: "Payment Required", code: "SECURITY_REJECTION", message: "העסקה נחסמה עקב חשד להונאה" });
-    }
-
-    const totalAmount = value.seats.reduce((sum, seat) => sum + getSeatPrice(seat), 0);
-
-    const order = { 
-        orderId: `PAY-${Date.now()}`, 
-        userId: value.userId,
-        movieId: value.movieId,
-        seats: value.seats,
-        date: value.date,
-        time: value.time,
-        totalAmount: `₪${totalAmount.toFixed(2)}`,
-        status: "confirmed",
-        paymentStatus: "paid",
-        transactionId: `TXN-${Math.random().toString(36).substr(2, 9).toUpperCase()}`
-    };
-
-    ORDERS.push(order);
-    res.status(201).json({ message: "Payment successful!", order });
 });
 
 // ── 10. FINAL SETUP ──
