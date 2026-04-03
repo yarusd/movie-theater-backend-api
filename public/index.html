@@ -104,12 +104,36 @@
     <main>
         <section id="welcome" class="content-section active">
             <header>
-                <h1>Cinematic Data & Booking API</h1>
-                <img src="https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&q=80" alt="Cinema Interior" class="hero-img">
-                <p class="home-caption">
-                    Welcome to the <strong>MovieTime Developer Portal</strong>. This API provides an enterprise-grade infrastructure for managing movie catalogs and dynamic seat reservations. Designed for high-performance automation testing, it features secure payment simulations, dynamic tiered pricing, and advanced data integrity checks.
-                </p>
+                <h2>Developer Portal</h2>
+                <h1>MovieTime Enterprise <span>API</span></h1>
             </header>
+            
+            <img src="https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1200&q=80" alt="Cinema Hero" class="hero-img">
+
+            <div class="home-caption">
+                <p>Welcome to the MovieTime API. This portal provides comprehensive documentation for managing cinema assets, user bookings, and administrative operations.</p>
+                
+                <div style="background: rgba(249, 115, 22, 0.05); border: 1px solid var(--accent); border-radius: 12px; padding: 25px; margin-top: 40px;">
+                    <h3 style="color: var(--accent); margin-top: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 10px;">
+                        <span>🔑</span> Authentication & Headers
+                    </h3>
+                    <p style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 20px;">Protecting our resources is a priority. Please include the following headers in your requests to access restricted data:</p>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div style="background: #000; padding: 15px; border-radius: 8px; border: 1px solid #334155;">
+                            <h4 style="margin-top: 0;">x-api-key</h4>
+                            <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 8px;">Required for Admin endpoints (POST/PUT/DELETE movies).</p>
+                            <code style="color: var(--accent); font-size: 0.9rem;">master-key</code>
+                        </div>
+                        
+                        <div style="background: #000; padding: 15px; border-radius: 8px; border: 1px solid #334155;">
+                            <h4 style="margin-top: 0;">x-user-id</h4>
+                            <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 8px;">Required for personal data safety (Orders). Prevents IDOR violations.</p>
+                            <code style="color: var(--put); font-size: 0.9rem;">{user_id}</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </section>
 
         <section id="standards" class="content-section">
