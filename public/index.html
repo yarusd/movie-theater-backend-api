@@ -3,65 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MovieTime API | Enterprise Developer Documentation</title>
+    <title>MovieTime API | Cinematic Data & Booking Portal</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg: #0f172a; --card-bg: #1e293b; --sidebar-bg: #0b1120; --text: #f1f5f9;
-            --get: #10b981; --post: #f59e0b; --put: #3b82f6; --delete: #ef4444; --accent: #8b5cf6;
+            --bg: #030712; /* Very deep blue from logo background */
+            --card-bg: #111827; /* Darker, futuristic card bg */
+            --sidebar-bg: #0b1120; /* Keep sidebar dark and distinct */
+            --text: #f3f4f6; /* Off-white for readability */
+            --get: #10b981; /* Keep standard color */
+            --post: #f59e0b; /* Keep standard color */
+            --put: #3b82f6; /* Keep standard color */
+            --delete: #ef4444; /* Keep standard color */
+            --accent: #f97316; /* Glowing orange from logo play button */
+            --accent-glow: rgba(249, 115, 22, 0.4); /* Glow effect for accent */
+            --api-key-header: #fff; /* White key text */
             --font-size: 0.85rem;
         }
         * { box-sizing: border-box; }
-        body { 
-            font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); 
-            margin: 0; display: flex; font-size: var(--font-size); line-height: 1.5; 
-        }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; font-size: var(--font-size); overflow: hidden; }
 
-        /* Sidebar Navigation */
-        nav {
-            width: 260px; height: 100vh; background: var(--sidebar-bg);
-            position: fixed; border-right: 1px solid #334155;
-            padding: 20px; overflow-y: auto;
-        }
-        nav h2 { font-size: 1.1rem; color: var(--accent); margin-bottom: 20px; border-bottom: 1px solid #334155; padding-bottom: 10px; }
+        /* Sidebar */
+        nav { width: 260px; height: 100vh; background: var(--sidebar-bg); border-right: 1px solid #334155; padding: 20px; overflow-y: auto; }
+        nav h2 { font-size: 1.1rem; color: var(--accent); cursor: pointer; text-shadow: 0 0 10px var(--accent-glow); }
         nav ul { list-style: none; padding: 0; }
-        nav li { margin-bottom: 8px; }
-        nav a { 
-            text-decoration: none; color: #94a3b8; display: block; padding: 6px 12px; 
-            border-radius: 6px; transition: 0.2s; 
-        }
-        nav a:hover { background: #1e293b; color: var(--text); }
-        .nav-cat { font-weight: bold; font-size: 0.7rem; text-transform: uppercase; margin-top: 20px; color: #64748b; letter-spacing: 1px; margin-bottom: 5px; }
+        nav li { margin-bottom: 5px; }
+        nav a { text-decoration: none; color: #94a3b8; display: block; padding: 8px 12px; border-radius: 6px; transition: 0.2s; cursor: pointer; }
+        nav a:hover, nav a.active { background: #1e293b; color: var(--text); }
+        .nav-cat { font-weight: bold; font-size: 0.7rem; text-transform: uppercase; margin-top: 20px; color: #64748b; letter-spacing: 1px; }
 
-        /* Main Content Area */
-        main { flex: 1; margin-left: 260px; padding: 40px; max-width: 1100px; }
-        header { text-align: center; padding-bottom: 40px; border-bottom: 1px solid #334155; margin-bottom: 40px; }
-        h1 { font-size: 2.2rem; margin-bottom: 10px; color: var(--text); }
-        .base-url { 
-            background: #000; padding: 10px 20px; border-radius: 6px; display: inline-block; 
-            font-family: monospace; border: 1px solid var(--accent); color: var(--accent); font-size: 1rem;
-        }
-
-        .auth-section { background: rgba(139, 92, 246, 0.05); border: 1px solid var(--accent); padding: 25px; border-radius: 10px; margin-bottom: 40px; }
-        .section-title { font-size: 1.8rem; margin: 60px 0 25px; border-bottom: 2px solid #334155; padding-bottom: 10px; text-transform: uppercase; }
+        /* Main Content */
+        main { flex: 1; height: 100vh; overflow-y: auto; padding: 40px; position: relative; }
+        .content-section { display: none; max-width: 900px; margin: 0 auto; animation: fadeIn 0.3s ease; }
+        .content-section.active { display: block; }
         
-        .endpoint { background: var(--card-bg); border-radius: 12px; padding: 25px; margin-bottom: 35px; border-left: 6px solid #ccc; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Home Section */
+        #welcome header { text-align: center; padding: 60px 0; }
+        .home-logo { max-width: 300px; margin-bottom: 20px; }
+        .home-caption { color: #f8fafc; font-size: 1.1rem; max-width: 600px; margin: 20px auto; }
+        .base-url { background: #000; padding: 10px 20px; border-radius: 6px; border: 1px solid var(--accent); color: var(--accent); font-family: monospace; font-size: 1rem; margin-top: 20px; display: inline-block; box-shadow: 0 0 15px var(--accent-glow); }
+
+        /* Endpoints and Content */
+        .endpoint { background: var(--card-bg); border-radius: 12px; padding: 25px; margin-bottom: 30px; border-left: 6px solid #ccc; position: relative; }
         .get { border-color: var(--get); } .post { border-color: var(--post); } .put { border-color: var(--put); } .delete { border-color: var(--delete); }
-        
-        .method { padding: 4px 12px; border-radius: 4px; font-weight: bold; margin-right: 12px; font-size: 0.8rem; color: white; text-transform: uppercase; }
+        .method { padding: 4px 10px; border-radius: 4px; font-weight: bold; color: white; font-size: 0.75rem; text-transform: uppercase; margin-right: 10px; }
         .m-get { background: var(--get); } .m-post { background: var(--post); } .m-put { background: var(--put); } .m-delete { background: var(--delete); }
         
-        pre { background: #000; padding: 18px; border-radius: 8px; overflow-x: auto; color: #34d399; font-size: 0.85rem; border: 1px solid #334155; margin: 15px 0; }
-        code { color: #f472b6; font-family: 'Courier New', monospace; }
-        
-        table { width: 100%; border-collapse: collapse; margin: 20px 0; background: rgba(0,0,0,0.2); border-radius: 8px; overflow: hidden; }
-        th, td { padding: 14px; border-bottom: 1px solid #334155; text-align: left; }
-        th { background: #334155; color: white; text-transform: uppercase; font-size: 0.75rem; }
-
-        .api-key-badge { background: var(--delete); color: white; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; margin-left: 5px; font-weight: bold; }
-        .user-id-badge { background: var(--put); color: white; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; margin-left: 5px; font-weight: bold; }
-        
-        .footer { text-align: center; padding: 60px 0; color: #64748b; border-top: 1px solid #334155; margin-top: 60px; }
+        pre { background: #000; padding: 15px; border-radius: 6px; color: #34d399; border: 1px solid #334155; font-size: 0.8rem; margin: 10px 0; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 0.8rem; }
+        th, td { padding: 12px; border-bottom: 1px solid #334155; text-align: left; }
+        th { background: #334155; color: white; }
+        h4 { color: var(--accent); text-transform: uppercase; margin-top: 20px; font-size: 0.75rem; }
+        .api-key-header-text { color: var(--api-key-header); font-weight: bold; }
 
         @media (max-width: 768px) {
             nav { display: none; }
@@ -72,169 +67,273 @@
 <body>
 
 <nav>
-    <h2>MovieTime API</h2>
+    <h2 onclick="showSection('welcome')">MovieTime API</h2>
     <ul>
-        <li><a href="#welcome">🏠 Overview</a></li>
-        <li><a href="#auth">🔐 Authentication</a></li>
+        <li><a onclick="showSection('welcome')">🏠 Home</a></li>
+        <li><a onclick="showSection('standards')">📊 Status Standards</a></li>
         
         <div class="nav-cat">Retrieval (GET)</div>
-        <li><a href="#health">🟢 System Health</a></li>
-        <li><a href="#get-movies">🟢 Movie Catalog</a></li>
-        <li><a href="#get-occupied">🟢 Seat Availability</a></li>
-        <li><a href="#get-orders">🟢 My Orders</a></li>
+        <li><a onclick="showSection('health')">🟢 System Health</a></li>
+        <li><a onclick="showSection('get-movies-all')">🟢 Get Movie List</a></li>
+        <li><a onclick="showSection('get-movies-filtered')">🟢 Movie Search/Filters</a></li>
+        <li><a onclick="showSection('get-occupied')">🟢 Seat Check</a></li>
+        <li><a onclick="showSection('get-orders')">🟢 User Orders</a></li>
 
         <div class="nav-cat">Creation (POST)</div>
-        <li><a href="#register">🟡 User Registration</a></li>
-        <li><a href="#login">🟡 Authentication</a></li>
-        <li><a href="#post-movies">🟡 Add Content</a></li>
-        <li><a href="#checkout">🟡 Checkout (Payment)</a></li>
+        <li><a onclick="showSection('register')">🟡 Register</a></li>
+        <li><a onclick="showSection('login')">🟡 Login</a></li>
+        <li><a onclick="showSection('post-movies')">🟡 Add Movie</a></li>
+        <li><a onclick="showSection('post-orders')">🟡 Free Booking</a></li>
+        <li><a onclick="showSection('checkout')">🟡 Paid Checkout</a></li>
 
         <div class="nav-cat">Management</div>
-        <li><a href="#put-movie">🔵 Edit Movie</a></li>
-        <li><a href="#delete-movie">🔴 Remove Movie</a></li>
-        <li><a href="#cancel-order">🔴 Cancel Order</a></li>
-        <li><a href="#reset">🔴 Factory Reset</a></li>
-        <li><a href="#standards">📊 Error Standards</a></li>
+        <li><a onclick="showSection('put-movie')">🔵 Update Movie</a></li>
+        <li><a onclick="showSection('delete-movie')">🔴 Delete Movie</a></li>
+        <li><a onclick="showSection('cancel-order')">🔴 Cancel Order</a></li>
+        <li><a onclick="showSection('reset')">🔴 System Reset</a></li>
     </ul>
 </nav>
 
 <main>
-    <header id="welcome">
-        <h1>🎥 MovieTime API Documentation</h1>
-        <div class="base-url">Base URL: https://movie-time-api.onrender.com/api</div>
-    </header>
-
-    <section id="auth" class="auth-section">
-        <h3>🔐 Security & Authorization</h3>
-        <p>This API uses two types of identity verification:</p>
-        <ul>
-            <li><strong>Admin Operations:</strong> Require <code>x-api-key</code> header for adding, editing, or deleting movies.</li>
-            <li><strong>User Privacy:</strong> Personal order history requires <code>x-user-id</code> to prevent IDOR (Insecure Direct Object Reference).</li>
-        </ul>
+    <section id="welcome" class="content-section active">
+        <header>
+            <img src="https://i.ibb.co/Xz9j98y/image-0.png" alt="Movie Time API Logo" class="home-logo">
+            <p class="home-caption">ברוכים הבאים לפלטפורמת הנתונים וההזמנות הקולנועית (Cinematic Data & Booking Platform) המתקדמת ביותר. המערכת מציעה גישה מהירה לקטלוג סרטים מקיף וכלים מתקדמים לניהול הזמנות מושבים, הכל בחיבור דיגיטלי מאובטח.</p>
+            <div class="base-url">Base URL: https://movie-time-api.onrender.com/api</div>
+        </header>
     </section>
 
-    <h2 class="section-title" style="color: var(--get);" id="retrieval">🟢 GET - Data Retrieval</h2>
+    <section id="health" class="content-section">
+        <div class="endpoint get">
+            <span class="method m-get">GET</span> <code>/health</code>
+            <h3>System Diagnostics</h3>
+            <p>Verify server availability and database size.</p>
+            <h4>Response (200 OK):</h4>
+            <pre>{ "status": "UP", "moviesCount": 60, "serverTime": "2026-03-24T21:00Z" }</pre>
+        </div>
+    </section>
 
-    <div class="endpoint get" id="health">
-        <span class="method m-get">GET</span> <code>/health</code>
-        <h3>System Diagnostics</h3>
-        <p>Returns the status of the server and the current number of movies in the database.</p>
-        <h4>Example Response:</h4>
-        <pre>{ "status": "UP", "moviesCount": 60, "serverTime": "2026-03-24T21:00:00Z" }</pre>
-    </div>
+    <section id="get-movies-all" class="content-section">
+        <div class="endpoint get">
+            <span class="method m-get">GET</span> <code>/movies</code>
+            <h3>Get Full Movie List</h3>
+            <p>Returns the entire movie catalog without any filters.</p>
+            <h4>Response (200 OK):</h4>
+            <pre>[ { "id": 1, "title": "ThunderBolts*", "genre": "Action", "rating": 7.6 }, ... ]</pre>
+        </div>
+    </section>
 
-    <div class="endpoint get" id="get-movies">
-        <span class="method m-get">GET</span> <code>/movies</code>
-        <h3>Movie Catalog & Search</h3>
-        <p>Supports advanced filtering and search queries.</p>
-        <table>
-            <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
-            <tr><td><code>q</code></td><td>String</td><td>Smart search by Title, Genre, or Cast members.</td></tr>
-            <tr><td><code>genre</code></td><td>String</td><td>Filter by category (Case-insensitive).</td></tr>
-            <tr><td><code>year</code></td><td>Integer</td><td>Filter by release year.</td></tr>
-            <tr><td><code>badge</code></td><td>String</td><td>Filter by status: <code>NOW SHOWING</code>, <code>COMING SOON</code>, etc.</td></tr>
-            <tr><td><code>sort</code></td><td>String</td><td>Use <code>rating</code> to sort by highest score.</td></tr>
-        </table>
-    </div>
+    <section id="get-movies-filtered" class="content-section">
+        <div class="endpoint get">
+            <span class="method m-get">GET</span> <code>/movies?filters</code>
+            <h3>Movie Search & Filtering</h3>
+            <p>Search movies using smart query parameters. Partial words and combined filters supported.</p>
+            <table>
+                <tr><th>Param</th><th>Type</th><th>Example / Description</th></tr>
+                <tr><td><code>q</code></td><td>String</td><td>Smart search (Title, Genre, Cast). e.g. <code>?q=Dune</code></td></tr>
+                <tr><td><code>genre</code></td><td>String</td><td>Filter by genre (Action, Comedy). e.g. <code>?genre=Action</code></td></tr>
+                <tr><td><code>year</code></td><td>Integer</td><td>Filter by release year. e.g. <code>?year=2024</code></td></tr>
+                <tr><td><code>badge</code></td><td>String</td><td><code>NOW SHOWING</code>, <code>COMING SOON</code>, <code>EXTENDED RUN</code></td></tr>
+                <tr><td><code>sort</code></td><td>String</td><td>Use <code>sort=rating</code> for highest-to-lowest rating.</td></tr>
+            </table>
+            <h4>Request:</h4>
+            <code>GET /api/movies?q=Gladiator&genre=Action&sort=rating</code>
+            <h4>Response (200 OK):</h4>
+            <pre>[ { "id": 25, "title": "Gladiator II", "genre": "Action", "rating": 7.2 }, ... ]</pre>
+        </div>
+    </section>
 
-    <div class="endpoint get" id="get-occupied">
-        <span class="method m-get">GET</span> <code>/movies/:id/occupied</code>
-        <h3>Occupied Seats Check</h3>
-        <p>Returns an array of strings representing taken seats (e.g., A1, B5) for a specific session.</p>
-        <p><strong>Query Params:</strong> <code>date</code> (YYYY-MM-DD), <code>time</code> (HH:mm)</p>
-    </div>
+    <section id="get-occupied" class="content-section">
+        <div class="endpoint get">
+            <span class="method m-get">GET</span> <code>/movies/:id/occupied</code>
+            <h3>Occupied Seats Check</h3>
+            <p>Checks which seats are taken for a specific movie session. Query params: <code>date</code> (YYYY-MM-DD), <code>time</code> (HH:mm).</p>
+            <h4>Response (200 OK):</h4>
+            <pre>["A1", "C5", "E8"]</pre>
+        </div>
+    </section>
 
-    <div class="endpoint get" id="get-orders">
-        <span class="method m-get">GET</span> <code>/orders/:userId</code> <span class="user-id-badge">USER ID</span>
-        <h3>User Order History</h3>
-        <p>Retrieves all confirmed bookings for a specific user ID. Requires matching <code>x-user-id</code> header.</p>
-    </div>
+    <section id="get-orders" class="content-section">
+        <div class="endpoint get">
+            <span class="method m-get">GET</span> <code>/orders/:userId</code>
+            <h3>User Order History</h3>
+            <p>Retrieves all bookings for a specific user ID. Requires <code>x-user-id</code> header.</p>
+            <h4>Response (200 OK):</h4>
+            <pre>[ { "orderId": "ORD-123", "movieId": 25, "seats": ["A1"], "totalAmount": "₪35.00" } ]</pre>
+        </div>
+    </section>
 
-    <h2 class="section-title" style="color: var(--post);" id="creation">🟡 POST - Resource Creation</h2>
+    <section id="register" class="content-section">
+        <div class="endpoint post">
+            <span class="method m-post">POST</span> <code>/register</code>
+            <h3>User Account Creation</h3>
+            <p>Creates a new user account. Validation rules apply.</p>
+            <h4>Request Body:</h4>
+            <pre>{ "name": "Alice Cohen", "email": "alice@test.com", "password": "securepass123", "password_confirmation": "securepass123" }</pre>
+            <h4>Response (201 Created):</h4>
+            <pre>{ "message": "User registered successfully", "userId": 17112345 }</pre>
+        </div>
+    </section>
 
-    <div class="endpoint post" id="register">
-        <span class="method m-post">POST</span> <code>/register</code>
-        <h3>User Account Creation</h3>
-        <p><strong>Validation:</strong> Name must contain English letters only. Password must be min 6 chars.</p>
-        <h4>Request Body:</h4>
-        <pre>{
-  "name": "Neomi Levi",
-  "email": "neomi@example.com",
-  "password": "password123",
-  "password_confirmation": "password123"
+    <section id="login" class="content-section">
+        <div class="endpoint post">
+            <span class="method m-post">POST</span> <code>/login</code>
+            <h3>Authentication</h3>
+            <p>Authenticates a user. Use these test credentials:</p>
+            <table>
+                <tr><th>Role</th><th>Email</th><th>Password</th><th>Key (optional)</th></tr>
+                <tr><td>Primary Admin</td><td><code>admin@test.com</code></td><td><code>admin123</code></td><td>Can create movies</td></tr>
+                <tr><td>User Alice</td><td><code>user1@test.com</code></td><td><code>123456</code></td><td>Standard user</td></tr>
+                <tr><td>User Bob</td><td><code>user2@test.com</code></td><td><code>123456</code></td><td>Standard user</td></tr>
+                <tr><td>Locked Account</td><td><code>locked@test.com</code></td><td><code>123456</code></td><td>Locked</td></tr>
+            </table>
+            <h4>Request Body:</h4>
+            <pre>{ "email": "admin@test.com", "password": "admin123" }</pre>
+            <h4>Response (200 OK):</h4>
+            <pre>{ "id": 3, "role": "admin", "name": "Admin User", "email": "admin@test.com" }</pre>
+        </div>
+    </section>
+
+    <section id="post-movies" class="content-section">
+        <div class="endpoint post">
+            <span class="method m-post">POST</span> <code>/movies</code>
+            <h3>Add New Movie</h3>
+            <p>Requires Admin role and <span class="api-key-header-text">x-api-key</span> header.</p>
+            <h4>Request Body:</h4>
+            <pre>{
+  "title": "Avatar 3",
+  "genre": "Sci-Fi",
+  "duration": 150,
+  "year": 2025,
+  "badge": "COMING SOON"
 }</pre>
-    </div>
+            <h4>Response (201 Created):</h4>
+            <pre>{ "id": 1711234888, "title": "Avatar 3", ... }</pre>
+        </div>
+    </section>
 
-    <div class="endpoint post" id="login">
-        <span class="method m-post">POST</span> <code>/login</code>
-        <h3>System Authentication</h3>
-        <p>Use the following accounts for testing different scenarios:</p>
-        <table>
-            <tr><th>Role</th><th>Email</th><th>Password</th><th>Note</th></tr>
-            <tr><td>Primary Admin</td><td><code>admin@test.com</code></td><td><code>admin123</code></td><td>Can manage movies.</td></tr>
-            <tr><td>User Alice</td><td><code>user1@test.com</code></td><td><code>123456</code></td><td>Standard user.</td></tr>
-            <tr><td>Locked User</td><td><code>locked@test.com</code></td><td><code>123456</code></td><td>Returns 403 Forbidden.</td></tr>
-        </table>
-    </div>
-
-    <div class="endpoint post" id="post-movies">
-        <span class="method m-post">POST</span> <code>/movies</code> <span class="api-key-badge">API KEY</span>
-        <h3>Add New Movie to DB</h3>
-        <p>Requires full movie data. Returns <code>409 Conflict</code> if the title already exists.</p>
-    </div>
-
-    <div class="endpoint post" id="checkout" style="border-left-color: var(--accent);">
-        <span class="method m-post" style="background: var(--accent);">POST</span> <code>/payments/checkout</code>
-        <h3>Secure Checkout (Payment)</h3>
-        <p>Full order flow with integrated payment simulation. Pricing is calculated automatically:</p>
-        <ul>
-            <li><strong>Back Seats (Rows A-B):</strong> ₪35.00</li>
-            <li><strong>Standard Seats (Rows C-D):</strong> ₪50.00</li>
-            <li><strong>Premium Seats (Row E):</strong> ₪65.00</li>
-        </ul>
-        <h4>Required JSON:</h4>
-        <pre>{
-  "userId": 1, "movieId": 1, "seats": ["A1", "E1"],
-  "cardHolder": "Alice Cohen", "cardNumber": "1234567812345678",
-  "expiry": "12/28", "cvv": "123", "date": "2026-10-10", "time": "20:00"
+    <section id="post-orders" class="content-section">
+        <div class="endpoint post">
+            <span class="method m-post">POST</span> <code>/orders</code>
+            <h3>Free Seat Booking</h3>
+            <p>Directly reserve seats without payment details. Max 8 per order.</p>
+            <h4>Request Body:</h4>
+            <pre>{
+  "userId": 1,
+  "movieId": 25,
+  "seats": ["B1"],
+  "date": "2026-10-10",
+  "time": "20:00"
 }</pre>
-    </div>
+            <h4>Response (201 Created):</h4>
+            <pre>{ "orderId": "ORD-1711234567", "status": "confirmed", ... }</pre>
+        </div>
+    </section>
 
-    <h2 class="section-title" style="color: var(--put);" id="management">🔵 Management & Maintenance</h2>
+    <section id="checkout" class="content-section">
+        <div class="endpoint post" style="border-left-color: var(--accent);">
+            <span class="method m-post" style="background: var(--accent);">POST</span> <code>/payments/checkout</code>
+            <h3>Secure Paid Checkout</h3>
+            <p>Tiered Pricing: Rows A-B (Back: ₪35), C-D (Standard: ₪50), E (Premium: ₪65).</p>
+            <h4>Request Body:</h4>
+            <pre>{
+  "userId": 1,
+  "movieId": 25,
+  "seats": ["E1"],
+  "cardHolder": "Tzedek Wasi",
+  "cardNumber": "1234567812345678",
+  "expiry": "12/28",
+  "cvv": "123",
+  "date": "2026-12-01",
+  "time": "19:00"
+}</pre>
+            <h4>Response (201 Created):</h4>
+            <pre>{
+  "message": "Payment successful and tickets booked!",
+  "order": {
+    "totalAmount": "₪65.00",
+    "status": "confirmed",
+    "transactionId": "TXN-9876543210ABC"
+  }
+}</pre>
+        </div>
+    </section>
 
-    <div class="endpoint put" id="put-movie">
-        <span class="method m-put">PUT</span> <code>/movies/:id</code> <span class="api-key-badge">API KEY</span>
-        <h3>Full Movie Update</h3>
-        <p>Update all fields of an existing movie. Requires valid ID and Admin Key.</p>
-    </div>
+    <section id="put-movie" class="content-section">
+        <div class="endpoint put">
+            <span class="method m-put">PUT</span> <code>/movies/:id</code>
+            <h3>Update Movie</h3>
+            <p>Requires Admin role and x-api-key header.</p>
+            <h4>Request Body:</h4>
+            <pre>{ "title": "Updated Title", "genre": "Drama", ... }</pre>
+            <h4>Response (200 OK):</h4>
+            <pre>{ "message": "Movie updated successfully", "movie": { ... } }</pre>
+        </div>
+    </section>
 
-    <div class="endpoint delete" id="delete-movie">
-        <span class="method m-delete">DELETE</span> <code>/movies/:id</code> <span class="api-key-badge">API KEY</span>
-        <h3>Hard Delete Movie</h3>
-        <p>Permanently removes a movie from the database.</p>
-    </div>
+    <section id="delete-movie" class="content-section">
+        <div class="endpoint delete">
+            <span class="method m-delete">DELETE</span> <code>/movies/:id</code>
+            <h3>Delete Movie</h3>
+            <p>Permanently remove a movie from the catalog. Requires Admin role and x-api-key header.</p>
+            <h4>Response (200 OK):</h4>
+            <pre>{ "message": "Movie deleted successfully" }</pre>
+        </div>
+    </section>
 
-    <div class="endpoint delete" id="reset">
-        <span class="method m-delete">DELETE</span> <code>/test/reset</code> <span class="api-key-badge">API KEY</span>
-        <h3>QA System Reset</h3>
-        <p>Deletes all current orders and resets movies and users to the initial factory state.</p>
-    </div>
+    <section id="cancel-order" class="content-section">
+        <div class="endpoint delete">
+            <span class="method m-delete">DELETE</span> <code>/orders/:orderId</code>
+            <h3>Cancel Order</h3>
+            <p>Cancels a booking and frees the seats. Validates ownership.</p>
+            <h4>Response (200 OK):</h4>
+            <pre>{ "message": "Order cancelled successfully. Seats are now free." }</pre>
+        </div>
+    </section>
 
-    <h2 class="section-title" id="standards">📊 Response Status Standards</h2>
-    <table>
-        <tr><th>HTTP Code</th><th>Label</th><th>QA Context / Description</th></tr>
-        <tr><td><code>200 / 201</code></td><td>Success</td><td>Operation completed. 201 used for creation.</td></tr>
-        <tr><td><code>400</code></td><td>Bad Request</td><td>Validation failed. Check English letters only or Date format.</td></tr>
-        <tr><td><code>401 / 403</code></td><td>Auth Failure</td><td>Missing API Key, IDOR attempt, or Account Locked.</td></tr>
-        <tr><td><code>402</code></td><td>Payment Req.</td><td>Logic error: Credit card expired or Insufficient funds.</td></tr>
-        <tr><td><code>404</code></td><td>Not Found</td><td>The requested Movie, User or Order does not exist.</td></tr>
-        <tr><td><code>409</code></td><td>Conflict</td><td>Duplicate movie title or seats already booked.</td></tr>
-    </table>
+    <section id="reset" class="content-section">
+        <div class="endpoint delete">
+            <span class="method m-delete">DELETE</span> <code>/test/reset</code>
+            <h3>System Reset</h3>
+            <p>Deletes all orders and restores movies and users to the initial factory state. Requires x-api-key header.</p>
+            <h4>Response (200 OK):</h4>
+            <pre>{ "message": "System reset to factory state successfully." }</pre>
+        </div>
+    </section>
+
+    <section id="standards" class="content-section">
+        <h2 class="section-title">📊 HTTP Status Standards</h2>
+        <table>
+            <tr><th>Code</th><th>Label</th><th>Description</th></tr>
+            <tr><td><code>200</code></td><td>OK</td><td>Request completed successfully.</td></tr>
+            <tr><td><code>201</code></td><td>Created</td><td>Resource (Movie, Order, User) created successfully.</td></tr>
+            <tr><td><code>400</code></td><td>Bad Request</td><td>Validation failed. Check English letters, date format, fields.</td></tr>
+            <tr><td><code>401</code></td><td>Unauthorized</td><td>Missing x-api-key header.</td></tr>
+            <tr><td><code>402</code></td><td>Payment Required</td><td>Transaction declined or Card expired. Check funds.</td></tr>
+            <tr><td><code>403</code></td><td>Forbidden</td><td>Access denied. Locked account or IDOR attempt.</td></tr>
+            <tr><td><code>404</code></td><td>Not Found</td><td>The movie or resource does not exist.</td></tr>
+            <tr><td><code>409</code></td><td>Conflict</td><td>Duplicate title or seats already booked.</td></tr>
+        </table>
+    </section>
 
     <div class="footer">
         &copy; MovieTime API Documentation | Built for <strong>YT Automation Labs</strong>
     </div>
 </main>
+
+<script>
+    function showSection(sectionId) {
+        // הסרת Active מכל החלקים והקישורים
+        document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+
+        // הפעלת החלק הנבחר
+        document.getElementById(sectionId).classList.add('active');
+        
+        // סימון הקישור בתפריט
+        event.currentTarget.classList.add('active');
+    }
+</script>
 
 </body>
 </html>
