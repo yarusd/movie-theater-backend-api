@@ -326,6 +326,82 @@ app.post('/api/orders', (req, res) => {
     res.status(201).json(order);
 });
 
+// נתיב חדש: תשלום עבור הזמנה קיימת
+app.post('/api/payments/pay-existing', (req, res) => {
+    const { orderId, cardHolder, cardNumber, expiry, cvv } = req.body;
+
+    // 1. חיפוש ההזמנה
+    const order = ORDERS.find(o => o.orderId === orderId);
+    if (!order) return res.status(404).json({ error: "Not Found", message: "Order ID not found." });
+
+    // 2. בדיקה אם כבר שולם
+    if (order.paymentStatus === 'paid') {
+        return res.status(409).json({ error: "Conflict", message: "This order is already paid." });
+    }
+
+    // 3. ולידציה בסיסית לאשראי (שימוש בלוגיקה הקיימת שלנו)
+    if (isExpired(expiry)) {
+        return res.status(402).json({ error: "Payment Required", code: "CARD_EXPIRED" });
+    }
+    if (cardNumber.startsWith("0000")) {
+        return res.status(402).json({ error: "Payment Required", code: "INSUFFICIENT_FUNDS" });
+    }
+
+    // 4. חישוב מחיר ועדכון
+    const totalAmount = order.seats.reduce((sum, seat) => sum + getSeatPrice(seat), 0);
+    
+    order.paymentStatus = 'paid';
+    order.totalAmount = `₪${totalAmount.toFixed(2)}`;
+    order.transactionId = `TXN-REFUND-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+
+    res.status(200).json({ 
+        message: "Reservation successfully converted to paid order!", 
+        order 
+    });
+});
+
+// ── POST: SECURE CHECKOUT WITH TIERED PRICING ──
+app.post('/api/payments/checkout', (req, res) => {
+    const { error, value } = paymentSchema.validate(req.body);
+    if (error) return res.status(400).json({ error: "Validation Failed", message: error.details[0].message });
+
+    if (isExpired(value.expiry)) {
+        return res.status(402).json({ error: "Payment Required", code: "CARD_EXPIRED", message: "הכרטיס פג תוקף" });
+    }
+
+    const isTaken = ORDERS.some(o => 
+        o.movieId === value.movieId && o.date === value.date && o.time === value.time &&
+        o.seats.some(s => value.seats.includes(s))
+    );
+    if (isTaken) return res.status(409).json({ error: "Conflict", message: "Seats already booked." });
+
+    if (value.cardNumber.startsWith("0000")) {
+        return res.status(402).json({ error: "Payment Required", code: "INSUFFICIENT_FUNDS", message: "אין מספיק יתרה בחשבון" });
+    }
+    if (value.cardNumber.startsWith("1111")) {
+        return res.status(402).json({ error: "Payment Required", code: "SECURITY_REJECTION", message: "העסקה נחסמה עקב חשד להונאה" });
+    }
+
+    const totalAmount = value.seats.reduce((sum, seat) => sum + getSeatPrice(seat), 0);
+
+    const order = { 
+        orderId: `PAY-${Date.now()}`, 
+        userId: value.userId,
+        movieId: value.movieId,
+        seats: value.seats,
+        date: value.date,
+        time: value.time,
+        totalAmount: `₪${totalAmount.toFixed(2)}`,
+        status: "confirmed",
+        paymentStatus: "paid",
+        transactionId: `TXN-${Math.random().toString(36).substr(2, 9).toUpperCase()}`
+    };
+
+    ORDERS.push(order);
+    res.status(201).json({ message: "Payment successful!", order });
+});
+
+
 // ולידציה 4: הגנת IDOR
 app.get('/api/orders/:userId', (req, res) => {
     const userId = parseInt(req.params.userId);
