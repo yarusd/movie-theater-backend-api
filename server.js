@@ -215,23 +215,30 @@ app.post('/api/login', (req, res) => {
 
 app.get('/api/movies', (req, res) => {
     let result = JSON.parse(JSON.stringify(MOVIES));
-    // 1. הוספנו כאן את title ו-cast לרשימת הפרמטרים
     const { q, title, cast, genre, year, id, badge, sort } = req.query;
     
     if (year && isNaN(parseInt(year))) return res.status(400).json({ error: "Bad Request", message: "Year must be a number" });
 
     if (id) result = result.filter(m => m.id === parseInt(id));
     
-    // 2. חיפוש ספציפי בכותרת (האתר בטח משתמש רק בזה, וזה הבאג!)
-    if (title) result = result.filter(m => m.title.toLowerCase().includes(title.toLowerCase()));
+    // 1. חיפוש בכותרת (Case-Insensitive)
+    if (title) {
+        result = result.filter(m => m.title.toLowerCase().includes(title.toLowerCase()));
+    }
     
-    // 3. חיפוש ספציפי בשחקנים
-    if (cast) result = result.filter(m => m.cast && m.cast.some(a => a.toLowerCase().includes(cast.toLowerCase())));
+    // 2. חיפוש בשחקנים (Case-Insensitive)
+    if (cast) {
+        result = result.filter(m => m.cast && m.cast.some(a => a.toLowerCase().includes(cast.toLowerCase())));
+    }
 
-    if (genre) result = result.filter(m => m.genre.toLowerCase() === genre.toLowerCase());
+    // 3. סינון לפי ז'אנר (השוואה בטוחה בין שני הצדדים)
+    if (genre) {
+        result = result.filter(m => m.genre.toLowerCase() === genre.toLowerCase());
+    }
+
     if (year) result = result.filter(m => m.year === parseInt(year));
 
-    // ולידציה 2: חיפוש חכם (השרת תקין - הוא מחפש בהכל)
+    // 4. חיפוש חכם (Global Search) - הכל ב-Lower Case
     if (q) {
         const query = q.toLowerCase();
         result = result.filter(m => 
@@ -241,15 +248,20 @@ app.get('/api/movies', (req, res) => {
         );
     }
     
-    if (badge) result = result.filter(m => m.badge === badge.toUpperCase().replace('-', ' '));
-    if (sort) {
+    // 5. סינון Badge (נורמליזציה של הטקסט)
+    if (badge) {
+        const normalizedBadge = badge.toUpperCase().replace('-', ' ');
+        result = result.filter(m => m.badge === normalizedBadge);
+    }
+
+    // 6. מיון דינמי
+    if (sort && result.length > 0) {
         result.sort((a, b) => {
-            // מיון מספרים (רייטינג או שנה) - מהגבוה לנמוך
             if (typeof a[sort] === 'number') return b[sort] - a[sort];
-            // מיון טקסט (כותרת) - לפי א'-ב'
             return String(a[sort]).localeCompare(String(b[sort]));
         });
     }    
+    
     res.json(result);
 });
 
