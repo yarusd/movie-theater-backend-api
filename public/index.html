@@ -151,12 +151,23 @@
         <section id="get-movies-filtered" class="content-section">
             <div class="endpoint get">
                 <span class="method m-get">GET</span> <code>/movies?filters</code>
-                <h3>Advanced Filtering</h3>
-                <p>Use <code>?q=title</code>, <code>?genre=Action</code>, or <code>?sort=rating</code>.</p>
-                <h4>Example Request:</h4>
-                <code>GET /api/movies?q=Gladiator&genre=Action</code>
+                <h3>Advanced Filtering & Dynamic Sorting</h3>
+                <p>Use <code>?q=</code> for global search, or specific keys for precision. Combine with <code>?sort=</code> to order results.</p>
+                
+                <table>
+                    <tr><th>Param</th><th>Values</th><th>QA Target</th></tr>
+                    <tr><td><code>?q=</code></td><td>Any text</td><td><strong>Global Search:</strong> Scans Title, Genre, Cast.</td></tr>
+                    <tr><td><code>?title=</code></td><td>Movie Name</td><td>Search <strong>only</strong> in movie titles.</td></tr>
+                    <tr><td><code>?cast=</code></td><td>Actor Name</td><td>Search <strong>only</strong> in actor names.</td></tr>
+                    <tr><td><code>?genre=</code></td><td>Genre Name</td><td>Filter by exact genre (Action, Horror...).</td></tr>
+                    <tr><td><code>?sort=</code></td><td>rating, year, title</td><td>Sorts results by chosen field (high to low).</td></tr>
+                </table>
+
+                <h4>Example:</h4>
+                <code>GET /api/movies?genre=Action&sort=year</code>
+                
                 <h4>Response (200 OK):</h4>
-                <pre>[ { "id": 25, "title": "Gladiator II", "genre": "Action", "rating": 7.2 } ]</pre>
+                <pre>[ { "id": 1, "title": "ThunderBolts*", "year": 2025, "rating": 7.6 } ]</pre>
             </div>
         </section>
 
@@ -199,15 +210,64 @@
         </section>
 
         <section id="login" class="content-section">
-            <div class="endpoint post">
-                <span class="method m-post">POST</span> <code>/login</code>
-                <h3>Authentication</h3>
-                <h4>Request Body:</h4>
-                <pre>{ "email": "admin@test.com", "password": "admin123" }</pre>
-                <h4>Response (200 OK):</h4>
-                <pre>{ "id": 3, "role": "admin", "name": "Admin User", "email": "admin@test.com" }</pre>
-            </div>
-        </section>
+    <div class="endpoint post">
+        <span class="method m-post">POST</span> <code>/login</code>
+        <h3>Authentication & User Roles</h3>
+        <p>Authenticates a user and returns a session profile. Use these pre-configured accounts for your automated tests:</p>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Role / Status</th>
+                    <th>Email</th>
+                    <th>Password</th>
+                    <th>Expected Result</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Primary Admin</strong></td>
+                    <td><code>admin@test.com</code></td>
+                    <td><code>admin123</code></td>
+                    <td>Full Access (200 OK)</td>
+                </tr>
+                <tr>
+                    <td><strong>Standard User (Alice)</strong></td>
+                    <td><code>user1@test.com</code></td>
+                    <td><code>123456</code></td>
+                    <td>Standard Access (200 OK)</td>
+                </tr>
+                <tr>
+                    <td><strong>Standard User (Bob)</strong></td>
+                    <td><code>user2@test.com</code></td>
+                    <td><code>123456</code></td>
+                    <td>Standard Access (200 OK)</td>
+                </tr>
+                <tr>
+                    <td style="color: var(--delete);"><strong>Locked Account</strong></td>
+                    <td><code>locked@test.com</code></td>
+                    <td><code>123456</code></td>
+                    <td style="color: var(--delete);">403 Forbidden</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h4>Request Body:</h4>
+        <pre>{
+  "email": "user1@test.com",
+  "password": "123456"
+}</pre>
+
+        <h4>Response (200 OK):</h4>
+        <pre>{
+  "id": 1,
+  "name": "Alice Cohen",
+  "email": "user1@test.com",
+  "role": "user",
+  "locked": false
+}</pre>
+    </div>
+</section>
 
         <section id="post-movies" class="content-section">
             <div class="endpoint post">
