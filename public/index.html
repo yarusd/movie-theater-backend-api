@@ -70,7 +70,7 @@
             <tr><th>Parameter</th><th>Type</th><th>Example / Description</th></tr>
             <tr><td><code>id</code></td><td>Integer</td><td><code>/movies?id=25</code></td></tr>
             <tr><td><code>q</code></td><td>String</td><td><strong>Global Search:</strong> Searches by Title, Genre, or Cast. Partial words supported (e.g. <code>?q=thun</code>).</td></tr>
-            <tr><td><code>genre</code></td><td>String</td><td>Filter by genre. Supports any valid string (2-30 chars).</td></tr>
+            <tr><td><code>genre</code></td><td>String</td><td>Filter by genre. Case-insensitive. Must be a valid movie category (e.g., Action, Sci-Fi, Horror).</td></tr>            
             <tr><td><code>year</code></td><td>Integer</td><td><code>/movies?year=2024</code></td></tr>
             <tr><td><code>badge</code></td><td>String</td><td>Filter by tab: <code>NOW SHOWING</code>, <code>COMING SOON</code>, or <code>EXTENDED RUN</code>.</td></tr>
             <tr><td><code>sort</code></td><td>String</td><td>Use <code>sort=rating</code> to get movies from highest to lowest rating.</td></tr>
