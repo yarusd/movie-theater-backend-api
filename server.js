@@ -24,11 +24,11 @@ const requireApiKey = (req, res, next) => {
 
 // 1. חישוב מחיר לפי שורה (תואם לאתר: 35, 50, 65)
 const getSeatPrice = (seat) => {
-    const row = seat[0].toUpperCase(); // מקבל את האות הראשונה (A-E)
-    if (['A', 'B'].includes(row)) return 35; // Back
-    if (['C', 'D'].includes(row)) return 50; // Standard
-    if (row === 'E') return 65;              // Premium
-    return 50; // ברירת מחדל
+    const row = seat[0].toUpperCase(); 
+    if (row === 'A') return 65;              // Premium (הכי יקרה)
+    if (['B', 'C', 'D'].includes(row)) return 50; // Standard (אמצע)
+    if (row === 'E') return 35;              // Back (הכי זולה)
+    return 50; 
 };
 
 // 2. בדיקה אם תוקף הכרטיס עבר (מחזירה true אם פג תוקף)
