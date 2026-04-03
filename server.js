@@ -24,7 +24,8 @@ const requireApiKey = (req, res, next) => {
 
 const movieSchema = Joi.object({
     title: Joi.string().min(2).max(60).required(),
-    genre: Joi.string().valid('Action', 'Horror', 'Comedy', 'Drama', 'Animation', 'Sci-Fi', 'Thriller', 'Adventure', 'Romance').required(),
+    // עדכון: הוסרה המגבלה על רשימת ז'אנרים סגורה
+    genre: Joi.string().min(2).max(30).required(), 
     duration: Joi.number().positive().max(500).required(),
     year: Joi.number().integer().min(1900).max(2030).required(),
     rating: Joi.number().min(0).max(10).optional().default(0),
@@ -177,7 +178,17 @@ app.get('/api/movies', (req, res) => {
     if (id) result = result.filter(m => m.id === parseInt(id));
     if (genre) result = result.filter(m => m.genre.toLowerCase() === genre.toLowerCase());
     if (year) result = result.filter(m => m.year === parseInt(year));
-    if (q) result = result.filter(m => m.title.toLowerCase().includes(q.toLowerCase()));
+
+    // ולידציה 2: חיפוש חכם (Smart Search)
+    if (q) {
+        const query = q.toLowerCase();
+        result = result.filter(m => 
+            m.title.toLowerCase().includes(query) || 
+            m.genre.toLowerCase().includes(query) || 
+            (m.cast && m.cast.some(actor => actor.toLowerCase().includes(query)))
+        );
+    }
+    
     if (badge) result = result.filter(m => m.badge === badge.toUpperCase().replace('-', ' '));
 
     if (sort === 'rating') result.sort((a, b) => b.rating - a.rating);
@@ -198,6 +209,7 @@ app.post('/api/movies', requireApiKey, (req, res) => {
     const { error, value } = movieSchema.validate(req.body);
     if (error) return res.status(400).json({ error: "Bad Request", message: error.details[0].message });
 
+    // ולידציה 3: מניעת כפילויות סרטים
     const movieExists = MOVIES.find(m => m.title.toLowerCase() === value.title.toLowerCase());
     if (movieExists) return res.status(409).json({ error: "Conflict", message: "Movie already exists." });
 
@@ -216,6 +228,19 @@ app.put('/api/movies/:id', requireApiKey, (req, res) => {
     const { error, value } = movieSchema.validate(req.body);
     if (error) return res.status(400).json({ error: "Validation Failed", message: error.details[0].message });
 
+    // --- הבדיקה החדשה: מניעת כפילות שם בעדכון ---
+    const duplicateMovie = MOVIES.find(m => 
+        m.title.toLowerCase() === value.title.toLowerCase() && m.id !== id
+    );
+    
+    if (duplicateMovie) {
+        return res.status(409).json({ 
+            error: "Conflict", 
+            message: `Cannot update: A movie with the title '${value.title}' already exists.` 
+        });
+    }
+    // ------------------------------------------
+
     MOVIES[movieIndex] = { ...value, id };
     res.json({ message: "Movie updated successfully", movie: MOVIES[movieIndex] });
 });
@@ -233,7 +258,7 @@ app.delete('/api/movies/:id', requireApiKey, (req, res) => {
     }
 });
 
-// ── 8. ORDERS (Including IDOR & Cancellation Flow) ──
+// ── 8. ORDERS ──
 
 app.post('/api/orders', (req, res) => {
     const { error, value } = orderSchema.validate(req.body);
@@ -257,13 +282,11 @@ app.post('/api/orders', (req, res) => {
     res.status(201).json(order);
 });
 
-// 1. שיפור: מניעת IDOR (Insecure Direct Object Reference)
-// באוטומציה תוכלי לשלוח ID בכתובת, אבל ID שונה ב-Header 'x-user-id' כדי לבדוק חסימה
+// ולידציה 4: הגנת IDOR
 app.get('/api/orders/:userId', (req, res) => {
     const userId = parseInt(req.params.userId);
-    const authenticatedUserId = req.headers['x-user-id']; // סימולציה של יוזר מחובר
+    const authenticatedUserId = req.headers['x-user-id'];
 
-    // בדיקת IDOR: אם המשתמש מנסה לראות הזמנות של מישהו אחר
     if (authenticatedUserId && parseInt(authenticatedUserId) !== userId) {
         return res.status(403).json({ 
             error: "Forbidden", 
@@ -275,7 +298,7 @@ app.get('/api/orders/:userId', (req, res) => {
     res.json(userOrders);
 });
 
-// 2. שיפור: ביטול הזמנה (Cancellation Flow)
+// ולידציה 5: ביטול הזמנה
 app.delete('/api/orders/:orderId', (req, res) => {
     const { orderId } = req.params;
     const orderIndex = ORDERS.findIndex(o => o.orderId === orderId);

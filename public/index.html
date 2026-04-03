@@ -42,7 +42,7 @@
 
     <div class="auth-section">
         <h3>🔐 Authentication & Security</h3>
-        <p>1. Administrative operations marked with <span class="api-key-badge">API KEY</span> require the header: <code>x-api-key: [YOUR_PRIVATE_KEY]</code></p>
+        <p>1. Administrative operations <span class="api-key-badge">API KEY</span>: Require the header: <code>x-api-key: [YOUR_PRIVATE_KEY]</code></p>
         <p>2. User Identity <span class="user-id-badge">USER ID</span>: To prevent IDOR, user-specific requests require the header: <code>x-user-id: [USER_ID]</code> to verify ownership.</p>
     </div>
 
@@ -52,7 +52,7 @@
         <span class="method m-get">GET</span> <code>/health</code>
         <h3>System Status</h3>
         <p>Check if the server is live and get database metrics.</p>
-        <h4>Response:</h4>
+        <h4>Response (200 OK):</h4>
         <pre>{ "status": "UP", "moviesCount": 60, "serverTime": "2026-03-24T21:49:12Z" }</pre>
     </section>
 
@@ -65,14 +65,15 @@
     <section class="endpoint get">
         <span class="method m-get">GET</span> <code>/movies?filters</code>
         <h3>Movie Search, Filtering & Sorting</h3>
-        <p>Search movies using query parameters. Combine multiple filters for precise results.</p>
+        <p>Search movies using query parameters. Support for partial words and combined filters.</p>
         <table>
             <tr><th>Parameter</th><th>Type</th><th>Example / Description</th></tr>
             <tr><td><code>id</code></td><td>Integer</td><td><code>/movies?id=25</code></td></tr>
-            <tr><td><code>q</code></td><td>String</td><td><code>/movies?q=Gladiator</code></td></tr>
-            <tr><td><code>genre</code></td><td>String</td><td><code>/movies?genre=Action</code></td></tr>
-            <tr><td><code>badge</code></td><td>String</td><td><code>NOW SHOWING</code>, <code>COMING SOON</code></td></tr>
-            <tr><td><code>sort</code></td><td>String</td><td><code>rating</code> (Sorts by rating, highest first)</td></tr>
+            <tr><td><code>q</code></td><td>String</td><td><strong>Global Search:</strong> Searches by Title, Genre, or Cast. Partial words supported (e.g. <code>?q=thun</code>).</td></tr>
+            <tr><td><code>genre</code></td><td>String</td><td>Filter by genre. Supports any valid string (2-30 chars).</td></tr>
+            <tr><td><code>year</code></td><td>Integer</td><td><code>/movies?year=2024</code></td></tr>
+            <tr><td><code>badge</code></td><td>String</td><td>Filter by tab: <code>NOW SHOWING</code>, <code>COMING SOON</code>, or <code>EXTENDED RUN</code>.</td></tr>
+            <tr><td><code>sort</code></td><td>String</td><td>Use <code>sort=rating</code> to get movies from highest to lowest rating.</td></tr>
         </table>
     </section>
 
@@ -81,14 +82,14 @@
         <h3>Seat Availability Check</h3>
         <p>Check which seats are already taken for a specific movie, date, and time.</p>
         <p><strong>Query Params:</strong> <code>date</code> (YYYY-MM-DD), <code>time</code> (HH:mm)</p>
-        <h4>Response:</h4>
+        <h4>Response (200 OK):</h4>
         <pre>["A1", "A2", "C5"]</pre>
     </section>
 
     <section class="endpoint get">
         <span class="method m-get">GET</span> <code>/orders/:userId</code> <span class="user-id-badge">USER ID</span>
         <h3>User Order History</h3>
-        <p>Retrieves all bookings made by a specific user. Requires <code>x-user-id</code> header to prevent IDOR.</p>
+        <p>Retrieves all bookings for a user. Requires <code>x-user-id</code> matching the <code>:userId</code> to prevent IDOR.</p>
     </section>
 
     <h2 class="section-title" style="color: var(--post);">🟡 POST - Create Requests</h2>
@@ -96,7 +97,7 @@
     <section class="endpoint post">
         <span class="method m-post">POST</span> <code>/register</code>
         <h3>User Registration</h3>
-        <p>Create a new account. Name must be letters only. Password: min 6 chars.</p>
+        <p>Create a new account. Name: letters only. Password: min 6 chars.</p>
         <h4>Request Body:</h4>
         <pre>{
   "name": "Neomi Levi",
@@ -104,11 +105,14 @@
   "password": "password123",
   "password_confirmation": "password123"
 }</pre>
+        <h4>Response (201 Created):</h4>
+        <pre>{ "message": "User registered successfully", "userId": 1711234567 }</pre>
     </section>
 
     <section class="endpoint post">
         <span class="method m-post">POST</span> <code>/login</code>
         <h3>Authentication (Login)</h3>
+        <p>Mandatory: <strong>email</strong>, <strong>password</strong>.</p>
         <h4>Test Credentials:</h4>
         <table>
             <tr><th>Email</th><th>Password</th><th>Role / Result</th></tr>
@@ -116,12 +120,15 @@
             <tr><td><code>user1@test.com</code></td><td><code>123456</code></td><td><span style="color: #3b82f6;">User (200 OK)</span></td></tr>
             <tr><td><code>locked@test.com</code></td><td><code>123456</code></td><td><span style="color: #ef4444;">Locked (403 Forbidden)</span></td></tr>
         </table>
+        <h4>Response (200 OK):</h4>
+        <pre>{ "id": 1, "name": "Alice Cohen", "email": "user1@test.com", "role": "user" }</pre>
     </section>
 
     <section class="endpoint post">
         <span class="method m-post">POST</span> <code>/movies</code> <span class="api-key-badge">API KEY</span>
         <h3>Create New Movie</h3>
-        <p>Note: Movie title must be unique (Case-insensitive). Otherwise, returns 409.</p>
+        <p>Mandatory: <strong>title</strong>, <strong>genre</strong>, <strong>duration</strong>, <strong>year</strong>, <strong>badge</strong>.</p>
+        <p><strong>Note:</strong> Returns 409 Conflict if movie title already exists.</p>
         <h4>Request Body:</h4>
         <pre>{
   "title": "Gladiator II",
@@ -130,22 +137,24 @@
   "year": 2024,
   "badge": "NOW SHOWING"
 }</pre>
+        <h4>Response (201 Created):</h4>
+        <pre>{ "id": 1711234888, "title": "Gladiator II", ... }</pre>
     </section>
 
     <section class="endpoint post">
         <span class="method m-post">POST</span> <code>/orders</code>
-        <h3>Book Tickets (Seat Selection)</h3>
-        <p>Book specific seats (A1 to E8). Max 8 per order. <strong>Date must be today or future.</strong></p>
+        <h3>Book Tickets (Seats Selection)</h3>
+        <p>Book specific seats (A1-E8). Max 8 per order. <strong>Date must be in the future.</strong></p>
         <h4>Request Body:</h4>
         <pre>{ 
   "userId": 1, 
-  "movieId": 25, 
+  "movieId": 1, 
   "seats": ["A1", "A2"],
-  "date": "2026-05-15",
-  "time": "18:00"
+  "date": "2026-12-25",
+  "time": "19:00"
 }</pre>
-        <h4>Error Handling:</h4>
-        <p>Returns <strong>409 Conflict</strong> if any of the selected seats are already booked for that showtime.</p>
+        <h4>Response (201 Created):</h4>
+        <pre>{ "orderId": "ORD-1711234567", "status": "confirmed", ... }</pre>
     </section>
 
     <h2 class="section-title" style="color: var(--put);">🔵 PUT - Update Requests</h2>
@@ -153,9 +162,9 @@
     <section class="endpoint put">
         <span class="method m-put">PUT</span> <code>/movies/:id</code> <span class="api-key-badge">API KEY</span>
         <h3>Modify Movie Data</h3>
-        <p>Full update of movie details. Ensure all required fields are provided.</p>
-        <h4>Response:</h4>
-        <pre>{ "message": "Movie updated successfully", "movie": { ...updatedObject } }</pre>
+        <p>Full update of movie details. <strong>Note:</strong> Returns 409 Conflict if updating to an existing title.</p>
+        <h4>Response (200 OK):</h4>
+        <pre>{ "message": "Movie updated successfully", "movie": { ... } }</pre>
     </section>
 
     <h2 class="section-title" style="color: var(--delete);">🔴 DELETE - Removal Requests</h2>
@@ -163,29 +172,36 @@
     <section class="endpoint delete">
         <span class="method m-delete">DELETE</span> <code>/movies/:id</code> <span class="api-key-badge">API KEY</span>
         <h3>Remove Movie</h3>
+        <p>Permanently delete a movie by ID.</p>
+        <h4>Response (200 OK):</h4>
+        <pre>{ "message": "Movie deleted successfully" }</pre>
     </section>
 
     <section class="endpoint delete">
         <span class="method m-delete">DELETE</span> <code>/orders/:orderId</code>
         <h3>Cancel Order</h3>
-        <p>Permanently removes a booking and frees the seats for other users.</p>
+        <p>Removes a booking and frees the seats for future use.</p>
+        <h4>Response (200 OK):</h4>
+        <pre>{ "message": "Order cancelled successfully. Seats are now free." }</pre>
     </section>
 
     <section class="endpoint delete">
         <span class="method m-delete">DELETE</span> <code>/test/reset</code> <span class="api-key-badge">API KEY</span>
         <h3>Database Reset (QA Tool)</h3>
-        <p>Resets movies, users, and <strong>clears all orders</strong> to initial state.</p>
+        <p>Resets movies, users, and clears all orders to initial state.</p>
+        <h4>Response (200 OK):</h4>
+        <pre>{ "message": "Database reset successfully." }</pre>
     </section>
 
     <h2 class="section-title">📊 Response Status Standards</h2>
     <table>
         <tr><th>Code</th><th>Label</th><th>Description</th></tr>
-        <tr><td><code>200 / 201</code></td><td>Success</td><td>Operation completed successfully.</td></tr>
-        <tr><td><code>400</code></td><td>Bad Request</td><td>Validation failed (e.g., Date in past, invalid seat format).</td></tr>
+        <tr><td><code>200 / 201</code></td><td>Success</td><td>Operation completed successfully (201 for creation).</td></tr>
+        <tr><td><code>400</code></td><td>Bad Request</td><td>Validation failed (Check fields/dates/format).</td></tr>
         <tr><td><code>401</code></td><td>Unauthorized</td><td>Invalid or missing x-api-key header.</td></tr>
-        <tr><td><code>403</code></td><td>Forbidden</td><td>IDOR attempt or account locked.</td></tr>
-        <tr><td><code>404</code></td><td>Not Found</td><td>Resource (Movie/Order) does not exist.</td></tr>
-        <tr><td><code>409</code></td><td>Conflict</td><td>Duplicate movie name or seats already taken.</td></tr>
+        <tr><td><code>403</code></td><td>Forbidden</td><td>IDOR attempt detected or account is locked.</td></tr>
+        <tr><td><code>404</code></td><td>Not Found</td><td>The movie or resource does not exist.</td></tr>
+        <tr><td><code>409</code></td><td>Conflict</td><td>Duplicate title or seats already booked.</td></tr>
     </table>
 
     <div class="footer">
