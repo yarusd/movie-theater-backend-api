@@ -20,6 +20,26 @@ const requireApiKey = (req, res, next) => {
     res.status(401).json({ error: "Unauthorized", message: "Invalid or missing x-api-key header." });
 };
 
+// ── HELPER FUNCTIONS FOR PAYMENT ──
+
+// 1. חישוב מחיר לפי שורה (תואם לאתר: 35, 50, 65)
+const getSeatPrice = (seat) => {
+    const row = seat[0].toUpperCase(); // מקבל את האות הראשונה (A-E)
+    if (['A', 'B'].includes(row)) return 35; // Back
+    if (['C', 'D'].includes(row)) return 50; // Standard
+    if (row === 'E') return 65;              // Premium
+    return 50; // ברירת מחדל
+};
+
+// 2. בדיקה אם תוקף הכרטיס עבר (מחזירה true אם פג תוקף)
+const isExpired = (expiry) => {
+    const [month, year] = expiry.split('/').map(Number);
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1;
+    const currentYear = parseInt(now.getFullYear().toString().slice(-2));
+    return year < currentYear || (year === currentYear && month < currentMonth);
+};
+
 // ── 3. VALIDATION SCHEMAS ──
 
 const movieSchema = Joi.object({
@@ -64,6 +84,20 @@ const orderSchema = Joi.object({
         'date.format': 'Date must be in YYYY-MM-DD format.'
     }),
     time: Joi.string().pattern(/^([0-9]{2}):([0-9]{2})$/).required()
+});
+
+const paymentSchema = Joi.object({
+    userId: Joi.number().required(),
+    movieId: Joi.number().required(),
+    seats: Joi.array().items(Joi.string().pattern(/^[A-E][1-8]$/)).min(1).max(8).required(),
+    date: Joi.date().iso().min('now').required(),
+    time: Joi.string().pattern(/^([0-9]{2}):([0-9]{2})$/).required(),
+    // עדכון: רק אותיות באנגלית ורווחים (מניעת עברית ותווים מיוחדים)
+    cardHolder: Joi.string().pattern(/^[a-zA-Z\s]+$/).min(3).max(50).required()
+        .messages({ 'string.pattern.base': 'Card holder name must contain English letters only.' }),
+    cardNumber: Joi.string().pattern(/^[0-9]{16}$/).required(),
+    expiry: Joi.string().pattern(/^(0[1-9]|1[0-2])\/([0-9]{2})$/).required(),
+    cvv: Joi.string().pattern(/^[0-9]{3}$/).required()
 });
 
 // ── 4. INITIAL DATA (Full List - 60 Movies) ──
@@ -328,6 +362,47 @@ app.delete('/api/test/reset', requireApiKey, (req, res) => {
     TEST_USERS = JSON.parse(JSON.stringify(INITIAL_USERS));
     ORDERS = [];
     res.json({ message: "Database reset successfully." });
+});
+
+// ── POST: SECURE CHECKOUT WITH TIERED PRICING ──
+app.post('/api/payments/checkout', (req, res) => {
+    const { error, value } = paymentSchema.validate(req.body);
+    if (error) return res.status(400).json({ error: "Validation Failed", message: error.details[0].message });
+
+    if (isExpired(value.expiry)) {
+        return res.status(402).json({ error: "Payment Required", code: "CARD_EXPIRED", message: "הכרטיס פג תוקף" });
+    }
+
+    const isTaken = ORDERS.some(o => 
+        o.movieId === value.movieId && o.date === value.date && o.time === value.time &&
+        o.seats.some(s => value.seats.includes(s))
+    );
+    if (isTaken) return res.status(409).json({ error: "Conflict", message: "Seats already booked." });
+
+    if (value.cardNumber.startsWith("0000")) {
+        return res.status(402).json({ error: "Payment Required", code: "INSUFFICIENT_FUNDS", message: "אין מספיק יתרה בחשבון" });
+    }
+    if (value.cardNumber.startsWith("1111")) {
+        return res.status(402).json({ error: "Payment Required", code: "SECURITY_REJECTION", message: "העסקה נחסמה עקב חשד להונאה" });
+    }
+
+    const totalAmount = value.seats.reduce((sum, seat) => sum + getSeatPrice(seat), 0);
+
+    const order = { 
+        orderId: `PAY-${Date.now()}`, 
+        userId: value.userId,
+        movieId: value.movieId,
+        seats: value.seats,
+        date: value.date,
+        time: value.time,
+        totalAmount: `₪${totalAmount.toFixed(2)}`,
+        status: "confirmed",
+        paymentStatus: "paid",
+        transactionId: `TXN-${Math.random().toString(36).substr(2, 9).toUpperCase()}`
+    };
+
+    ORDERS.push(order);
+    res.status(201).json({ message: "Payment successful!", order });
 });
 
 // ── 10. FINAL SETUP ──

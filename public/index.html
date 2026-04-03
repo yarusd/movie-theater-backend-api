@@ -7,97 +7,155 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg: #0f172a; --card-bg: #1e293b; --text: #f8fafc;
+            --bg: #0f172a; --card-bg: #1e293b; --sidebar-bg: #0b1120; --text: #f1f5f9;
             --get: #10b981; --post: #f59e0b; --put: #3b82f6; --delete: #ef4444; --accent: #8b5cf6;
+            --font-size: 0.85rem;
         }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; line-height: 1.6; }
-        .container { max-width: 1100px; margin: 0 auto; }
-        header { text-align: center; padding: 60px 0; border-bottom: 1px solid #334155; margin-bottom: 40px; }
-        h1 { font-size: 2.5rem; margin-bottom: 10px; color: var(--accent); }
-        .base-url { background: #000; padding: 12px 24px; border-radius: 8px; display: inline-block; font-family: monospace; border: 1px solid var(--accent); color: var(--accent); margin-top: 15px; font-size: 1.1rem; }
-        .auth-section { background: rgba(139, 92, 246, 0.1); border: 1px solid var(--accent); padding: 25px; border-radius: 12px; margin-bottom: 40px; }
-        .section-title { font-size: 2rem; margin: 60px 0 25px; padding-bottom: 10px; border-bottom: 2px solid #334155; text-transform: uppercase; letter-spacing: 1px; }
-        .endpoint { background: var(--card-bg); border-radius: 12px; padding: 30px; margin-bottom: 35px; border-left: 8px solid #ccc; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3); }
+        * { box-sizing: border-box; }
+        body { 
+            font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); 
+            margin: 0; display: flex; font-size: var(--font-size); line-height: 1.5; 
+        }
+
+        /* Sidebar Navigation */
+        nav {
+            width: 260px; height: 100vh; background: var(--sidebar-bg);
+            position: fixed; border-right: 1px solid #334155;
+            padding: 20px; overflow-y: auto;
+        }
+        nav h2 { font-size: 1.1rem; color: var(--accent); margin-bottom: 20px; border-bottom: 1px solid #334155; padding-bottom: 10px; }
+        nav ul { list-style: none; padding: 0; }
+        nav li { margin-bottom: 8px; }
+        nav a { 
+            text-decoration: none; color: #94a3b8; display: block; padding: 6px 12px; 
+            border-radius: 6px; transition: 0.2s; 
+        }
+        nav a:hover { background: #1e293b; color: var(--text); }
+        .nav-cat { font-weight: bold; font-size: 0.7rem; text-transform: uppercase; margin-top: 20px; color: #64748b; letter-spacing: 1px; margin-bottom: 5px; }
+
+        /* Main Content Area */
+        main { flex: 1; margin-left: 260px; padding: 40px; max-width: 1100px; }
+        header { text-align: center; padding-bottom: 40px; border-bottom: 1px solid #334155; margin-bottom: 40px; }
+        h1 { font-size: 2.2rem; margin-bottom: 10px; color: var(--text); }
+        .base-url { 
+            background: #000; padding: 10px 20px; border-radius: 6px; display: inline-block; 
+            font-family: monospace; border: 1px solid var(--accent); color: var(--accent); font-size: 1rem;
+        }
+
+        .auth-section { background: rgba(139, 92, 246, 0.05); border: 1px solid var(--accent); padding: 25px; border-radius: 10px; margin-bottom: 40px; }
+        .section-title { font-size: 1.8rem; margin: 60px 0 25px; border-bottom: 2px solid #334155; padding-bottom: 10px; text-transform: uppercase; }
+        
+        .endpoint { background: var(--card-bg); border-radius: 12px; padding: 25px; margin-bottom: 35px; border-left: 6px solid #ccc; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2); }
         .get { border-color: var(--get); } .post { border-color: var(--post); } .put { border-color: var(--put); } .delete { border-color: var(--delete); }
-        .method { padding: 6px 18px; border-radius: 6px; font-weight: bold; margin-right: 15px; font-size: 0.9rem; color: white; display: inline-block; min-width: 90px; text-align: center; }
+        
+        .method { padding: 4px 12px; border-radius: 4px; font-weight: bold; margin-right: 12px; font-size: 0.8rem; color: white; text-transform: uppercase; }
         .m-get { background: var(--get); } .m-post { background: var(--post); } .m-put { background: var(--put); } .m-delete { background: var(--delete); }
-        .api-key-badge { background: #ef4444; color: white; font-size: 0.75rem; padding: 3px 10px; border-radius: 4px; margin-left: 10px; vertical-align: middle; font-weight: 800; }
-        .user-id-badge { background: #3b82f6; color: white; font-size: 0.75rem; padding: 3px 10px; border-radius: 4px; margin-left: 10px; vertical-align: middle; font-weight: 800; }
-        pre { background: #000; padding: 20px; border-radius: 8px; overflow-x: auto; color: #34d399; font-size: 0.95rem; border: 1px solid #334155; margin-top: 15px; }
+        
+        pre { background: #000; padding: 18px; border-radius: 8px; overflow-x: auto; color: #34d399; font-size: 0.85rem; border: 1px solid #334155; margin: 15px 0; }
         code { color: #f472b6; font-family: 'Courier New', monospace; }
-        h4 { margin: 20px 0 10px; color: var(--accent); text-transform: uppercase; font-size: 0.8rem; }
-        table { width: 100%; border-collapse: collapse; margin: 25px 0; background: rgba(0,0,0,0.4); border-radius: 8px; overflow: hidden; }
-        th, td { padding: 18px; border-bottom: 1px solid #334155; text-align: left; }
-        th { background: #475569; color: white; text-transform: uppercase; font-size: 0.85rem; }
-        .footer { text-align: center; padding: 80px 0; color: #64748b; font-size: 1rem; border-top: 1px solid #334155; margin-top: 60px; }
+        
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; background: rgba(0,0,0,0.2); border-radius: 8px; overflow: hidden; }
+        th, td { padding: 14px; border-bottom: 1px solid #334155; text-align: left; }
+        th { background: #334155; color: white; text-transform: uppercase; font-size: 0.75rem; }
+
+        .api-key-badge { background: var(--delete); color: white; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; margin-left: 5px; font-weight: bold; }
+        .user-id-badge { background: var(--put); color: white; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; margin-left: 5px; font-weight: bold; }
+        
+        .footer { text-align: center; padding: 60px 0; color: #64748b; border-top: 1px solid #334155; margin-top: 60px; }
+
+        @media (max-width: 768px) {
+            nav { display: none; }
+            main { margin-left: 0; padding: 20px; }
+        }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <header>
+<nav>
+    <h2>MovieTime API</h2>
+    <ul>
+        <li><a href="#welcome">🏠 Overview</a></li>
+        <li><a href="#auth">🔐 Authentication</a></li>
+        
+        <div class="nav-cat">Retrieval (GET)</div>
+        <li><a href="#health">🟢 System Health</a></li>
+        <li><a href="#get-movies">🟢 Movie Catalog</a></li>
+        <li><a href="#get-occupied">🟢 Seat Availability</a></li>
+        <li><a href="#get-orders">🟢 My Orders</a></li>
+
+        <div class="nav-cat">Creation (POST)</div>
+        <li><a href="#register">🟡 User Registration</a></li>
+        <li><a href="#login">🟡 Authentication</a></li>
+        <li><a href="#post-movies">🟡 Add Content</a></li>
+        <li><a href="#checkout">🟡 Checkout (Payment)</a></li>
+
+        <div class="nav-cat">Management</div>
+        <li><a href="#put-movie">🔵 Edit Movie</a></li>
+        <li><a href="#delete-movie">🔴 Remove Movie</a></li>
+        <li><a href="#cancel-order">🔴 Cancel Order</a></li>
+        <li><a href="#reset">🔴 Factory Reset</a></li>
+        <li><a href="#standards">📊 Error Standards</a></li>
+    </ul>
+</nav>
+
+<main>
+    <header id="welcome">
         <h1>🎥 MovieTime API Documentation</h1>
         <div class="base-url">Base URL: https://movie-time-api.onrender.com/api</div>
     </header>
 
-    <div class="auth-section">
-        <h3>🔐 Authentication & Security</h3>
-        <p>1. Administrative operations <span class="api-key-badge">API KEY</span>: Require the header: <code>x-api-key: [YOUR_PRIVATE_KEY]</code></p>
-        <p>2. User Identity <span class="user-id-badge">USER ID</span>: To prevent IDOR, user-specific requests require the header: <code>x-user-id: [USER_ID]</code> to verify ownership.</p>
+    <section id="auth" class="auth-section">
+        <h3>🔐 Security & Authorization</h3>
+        <p>This API uses two types of identity verification:</p>
+        <ul>
+            <li><strong>Admin Operations:</strong> Require <code>x-api-key</code> header for adding, editing, or deleting movies.</li>
+            <li><strong>User Privacy:</strong> Personal order history requires <code>x-user-id</code> to prevent IDOR (Insecure Direct Object Reference).</li>
+        </ul>
+    </section>
+
+    <h2 class="section-title" style="color: var(--get);" id="retrieval">🟢 GET - Data Retrieval</h2>
+
+    <div class="endpoint get" id="health">
+        <span class="method m-get">GET</span> <code>/health</code>
+        <h3>System Diagnostics</h3>
+        <p>Returns the status of the server and the current number of movies in the database.</p>
+        <h4>Example Response:</h4>
+        <pre>{ "status": "UP", "moviesCount": 60, "serverTime": "2026-03-24T21:00:00Z" }</pre>
     </div>
 
-    <h2 class="section-title" style="color: var(--get);">🟢 GET - Retrieval Requests</h2>
-
-    <section class="endpoint get">
-        <span class="method m-get">GET</span> <code>/health</code>
-        <h3>System Status</h3>
-        <p>Check if the server is live and get database metrics.</p>
-        <h4>Response (200 OK):</h4>
-        <pre>{ "status": "UP", "moviesCount": 60, "serverTime": "2026-03-24T21:49:12Z" }</pre>
-    </section>
-
-    <section class="endpoint get">
+    <div class="endpoint get" id="get-movies">
         <span class="method m-get">GET</span> <code>/movies</code>
-        <h3>Get All Movies</h3>
-        <p>Returns the full catalog of movies stored in the system.</p>
-    </section>
-
-    <section class="endpoint get">
-        <span class="method m-get">GET</span> <code>/movies?filters</code>
-        <h3>Movie Search, Filtering & Sorting</h3>
-        <p>Search movies using query parameters. Support for partial words and combined filters.</p>
+        <h3>Movie Catalog & Search</h3>
+        <p>Supports advanced filtering and search queries.</p>
         <table>
-            <tr><th>Parameter</th><th>Type</th><th>Example / Description</th></tr>
-            <tr><td><code>id</code></td><td>Integer</td><td><code>/movies?id=25</code></td></tr>
-            <tr><td><code>q</code></td><td>String</td><td><strong>Global Search:</strong> Searches by Title, Genre, or Cast. Partial words supported (e.g. <code>?q=thun</code>).</td></tr>
-            <tr><td><code>genre</code></td><td>String</td><td>Filter by genre. Case-insensitive. Must be a valid movie category (e.g., Action, Sci-Fi, Horror).</td></tr>            
-            <tr><td><code>year</code></td><td>Integer</td><td><code>/movies?year=2024</code></td></tr>
-            <tr><td><code>badge</code></td><td>String</td><td>Filter by tab: <code>NOW SHOWING</code>, <code>COMING SOON</code>, or <code>EXTENDED RUN</code>.</td></tr>
-            <tr><td><code>sort</code></td><td>String</td><td>Use <code>sort=rating</code> to get movies from highest to lowest rating.</td></tr>
+            <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+            <tr><td><code>q</code></td><td>String</td><td>Smart search by Title, Genre, or Cast members.</td></tr>
+            <tr><td><code>genre</code></td><td>String</td><td>Filter by category (Case-insensitive).</td></tr>
+            <tr><td><code>year</code></td><td>Integer</td><td>Filter by release year.</td></tr>
+            <tr><td><code>badge</code></td><td>String</td><td>Filter by status: <code>NOW SHOWING</code>, <code>COMING SOON</code>, etc.</td></tr>
+            <tr><td><code>sort</code></td><td>String</td><td>Use <code>rating</code> to sort by highest score.</td></tr>
         </table>
-    </section>
+    </div>
 
-    <section class="endpoint get">
+    <div class="endpoint get" id="get-occupied">
         <span class="method m-get">GET</span> <code>/movies/:id/occupied</code>
-        <h3>Seat Availability Check</h3>
-        <p>Check which seats are already taken for a specific movie, date, and time.</p>
+        <h3>Occupied Seats Check</h3>
+        <p>Returns an array of strings representing taken seats (e.g., A1, B5) for a specific session.</p>
         <p><strong>Query Params:</strong> <code>date</code> (YYYY-MM-DD), <code>time</code> (HH:mm)</p>
-        <h4>Response (200 OK):</h4>
-        <pre>["A1", "A2", "C5"]</pre>
-    </section>
+    </div>
 
-    <section class="endpoint get">
+    <div class="endpoint get" id="get-orders">
         <span class="method m-get">GET</span> <code>/orders/:userId</code> <span class="user-id-badge">USER ID</span>
         <h3>User Order History</h3>
-        <p>Retrieves all bookings for a user. Requires <code>x-user-id</code> matching the <code>:userId</code> to prevent IDOR.</p>
-    </section>
+        <p>Retrieves all confirmed bookings for a specific user ID. Requires matching <code>x-user-id</code> header.</p>
+    </div>
 
-    <h2 class="section-title" style="color: var(--post);">🟡 POST - Create Requests</h2>
+    <h2 class="section-title" style="color: var(--post);" id="creation">🟡 POST - Resource Creation</h2>
 
-    <section class="endpoint post">
+    <div class="endpoint post" id="register">
         <span class="method m-post">POST</span> <code>/register</code>
-        <h3>User Registration</h3>
-        <p>Create a new account. Name: letters only. Password: min 6 chars.</p>
+        <h3>User Account Creation</h3>
+        <p><strong>Validation:</strong> Name must contain English letters only. Password must be min 6 chars.</p>
         <h4>Request Body:</h4>
         <pre>{
   "name": "Neomi Levi",
@@ -105,110 +163,78 @@
   "password": "password123",
   "password_confirmation": "password123"
 }</pre>
-        <h4>Response (201 Created):</h4>
-        <pre>{ "message": "User registered successfully", "userId": 1711234567 }</pre>
-    </section>
+    </div>
 
-    <section class="endpoint post">
+    <div class="endpoint post" id="login">
         <span class="method m-post">POST</span> <code>/login</code>
-        <h3>Authentication (Login)</h3>
-        <p>Mandatory: <strong>email</strong>, <strong>password</strong>.</p>
-        <h4>Test Credentials:</h4>
+        <h3>System Authentication</h3>
+        <p>Use the following accounts for testing different scenarios:</p>
         <table>
-            <tr><th>Email</th><th>Password</th><th>Role / Result</th></tr>
-            <tr><td><code>admin@test.com</code></td><td><code>admin123</code></td><td><span style="color: #f59e0b;">Primary Admin (200 OK)</span></td></tr>
-            <tr><td><code>user1@test.com</code></td><td><code>123456</code></td><td><span style="color: #3b82f6;">User Alice (200 OK)</span></td></tr>
-            <tr><td><code>user2@test.com</code></td><td><code>123456</code></td><td><span style="color: #3b82f6;">User Bob (200 OK)</span></td></tr>
-            <tr><td><code>locked@test.com</code></td><td><code>123456</code></td><td><span style="color: #ef4444;">Locked Account (403 Forbidden)</span></td></tr>
+            <tr><th>Role</th><th>Email</th><th>Password</th><th>Note</th></tr>
+            <tr><td>Primary Admin</td><td><code>admin@test.com</code></td><td><code>admin123</code></td><td>Can manage movies.</td></tr>
+            <tr><td>User Alice</td><td><code>user1@test.com</code></td><td><code>123456</code></td><td>Standard user.</td></tr>
+            <tr><td>Locked User</td><td><code>locked@test.com</code></td><td><code>123456</code></td><td>Returns 403 Forbidden.</td></tr>
         </table>
-        <h4>Response (200 OK):</h4>
-        <pre>{ "id": 1, "name": "Alice Cohen", "email": "user1@test.com", "role": "user" }</pre>
-    </section>
+    </div>
 
-    <section class="endpoint post">
+    <div class="endpoint post" id="post-movies">
         <span class="method m-post">POST</span> <code>/movies</code> <span class="api-key-badge">API KEY</span>
-        <h3>Create New Movie</h3>
-        <p>Mandatory: <strong>title</strong>, <strong>genre</strong>, <strong>duration</strong>, <strong>year</strong>, <strong>badge</strong>.</p>
-        <p><strong>Note:</strong> Returns 409 Conflict if movie title already exists.</p>
-        <h4>Request Body:</h4>
+        <h3>Add New Movie to DB</h3>
+        <p>Requires full movie data. Returns <code>409 Conflict</code> if the title already exists.</p>
+    </div>
+
+    <div class="endpoint post" id="checkout" style="border-left-color: var(--accent);">
+        <span class="method m-post" style="background: var(--accent);">POST</span> <code>/payments/checkout</code>
+        <h3>Secure Checkout (Payment)</h3>
+        <p>Full order flow with integrated payment simulation. Pricing is calculated automatically:</p>
+        <ul>
+            <li><strong>Back Seats (Rows A-B):</strong> ₪35.00</li>
+            <li><strong>Standard Seats (Rows C-D):</strong> ₪50.00</li>
+            <li><strong>Premium Seats (Row E):</strong> ₪65.00</li>
+        </ul>
+        <h4>Required JSON:</h4>
         <pre>{
-  "title": "Gladiator II",
-  "genre": "Action",
-  "duration": 148,
-  "year": 2024,
-  "badge": "NOW SHOWING"
+  "userId": 1, "movieId": 1, "seats": ["A1", "E1"],
+  "cardHolder": "Alice Cohen", "cardNumber": "1234567812345678",
+  "expiry": "12/28", "cvv": "123", "date": "2026-10-10", "time": "20:00"
 }</pre>
-        <h4>Response (201 Created):</h4>
-        <pre>{ "id": 1711234888, "title": "Gladiator II", ... }</pre>
-    </section>
+    </div>
 
-    <section class="endpoint post">
-        <span class="method m-post">POST</span> <code>/orders</code>
-        <h3>Book Tickets (Seats Selection)</h3>
-        <p>Book specific seats (A1-E8). Max 8 per order. <strong>Date must be in the future.</strong></p>
-        <h4>Request Body:</h4>
-        <pre>{ 
-  "userId": 1, 
-  "movieId": 1, 
-  "seats": ["A1", "A2"],
-  "date": "2026-12-25",
-  "time": "19:00"
-}</pre>
-        <h4>Response (201 Created):</h4>
-        <pre>{ "orderId": "ORD-1711234567", "status": "confirmed", ... }</pre>
-    </section>
+    <h2 class="section-title" style="color: var(--put);" id="management">🔵 Management & Maintenance</h2>
 
-    <h2 class="section-title" style="color: var(--put);">🔵 PUT - Update Requests</h2>
-
-    <section class="endpoint put">
+    <div class="endpoint put" id="put-movie">
         <span class="method m-put">PUT</span> <code>/movies/:id</code> <span class="api-key-badge">API KEY</span>
-        <h3>Modify Movie Data</h3>
-        <p>Full update of movie details. <strong>Note:</strong> Returns 409 Conflict if updating to an existing title.</p>
-        <h4>Response (200 OK):</h4>
-        <pre>{ "message": "Movie updated successfully", "movie": { ... } }</pre>
-    </section>
+        <h3>Full Movie Update</h3>
+        <p>Update all fields of an existing movie. Requires valid ID and Admin Key.</p>
+    </div>
 
-    <h2 class="section-title" style="color: var(--delete);">🔴 DELETE - Removal Requests</h2>
-
-    <section class="endpoint delete">
+    <div class="endpoint delete" id="delete-movie">
         <span class="method m-delete">DELETE</span> <code>/movies/:id</code> <span class="api-key-badge">API KEY</span>
-        <h3>Remove Movie</h3>
-        <p>Permanently delete a movie by ID.</p>
-        <h4>Response (200 OK):</h4>
-        <pre>{ "message": "Movie deleted successfully" }</pre>
-    </section>
+        <h3>Hard Delete Movie</h3>
+        <p>Permanently removes a movie from the database.</p>
+    </div>
 
-    <section class="endpoint delete">
-        <span class="method m-delete">DELETE</span> <code>/orders/:orderId</code>
-        <h3>Cancel Order</h3>
-        <p>Removes a booking and frees the seats for future use.</p>
-        <h4>Response (200 OK):</h4>
-        <pre>{ "message": "Order cancelled successfully. Seats are now free." }</pre>
-    </section>
-
-    <section class="endpoint delete">
+    <div class="endpoint delete" id="reset">
         <span class="method m-delete">DELETE</span> <code>/test/reset</code> <span class="api-key-badge">API KEY</span>
-        <h3>Database Reset (QA Tool)</h3>
-        <p>Resets movies, users, and clears all orders to initial state.</p>
-        <h4>Response (200 OK):</h4>
-        <pre>{ "message": "Database reset successfully." }</pre>
-    </section>
+        <h3>QA System Reset</h3>
+        <p>Deletes all current orders and resets movies and users to the initial factory state.</p>
+    </div>
 
-    <h2 class="section-title">📊 Response Status Standards</h2>
+    <h2 class="section-title" id="standards">📊 Response Status Standards</h2>
     <table>
-        <tr><th>Code</th><th>Label</th><th>Description</th></tr>
-        <tr><td><code>200 / 201</code></td><td>Success</td><td>Operation completed successfully (201 for creation).</td></tr>
-        <tr><td><code>400</code></td><td>Bad Request</td><td>Validation failed (Check fields/dates/format).</td></tr>
-        <tr><td><code>401</code></td><td>Unauthorized</td><td>Invalid or missing x-api-key header.</td></tr>
-        <tr><td><code>403</code></td><td>Forbidden</td><td>IDOR attempt detected or account is locked.</td></tr>
-        <tr><td><code>404</code></td><td>Not Found</td><td>The movie or resource does not exist.</td></tr>
-        <tr><td><code>409</code></td><td>Conflict</td><td>Duplicate title or seats already booked.</td></tr>
+        <tr><th>HTTP Code</th><th>Label</th><th>QA Context / Description</th></tr>
+        <tr><td><code>200 / 201</code></td><td>Success</td><td>Operation completed. 201 used for creation.</td></tr>
+        <tr><td><code>400</code></td><td>Bad Request</td><td>Validation failed. Check English letters only or Date format.</td></tr>
+        <tr><td><code>401 / 403</code></td><td>Auth Failure</td><td>Missing API Key, IDOR attempt, or Account Locked.</td></tr>
+        <tr><td><code>402</code></td><td>Payment Req.</td><td>Logic error: Credit card expired or Insufficient funds.</td></tr>
+        <tr><td><code>404</code></td><td>Not Found</td><td>The requested Movie, User or Order does not exist.</td></tr>
+        <tr><td><code>409</code></td><td>Conflict</td><td>Duplicate movie title or seats already booked.</td></tr>
     </table>
 
     <div class="footer">
-        &copy; MovieTime API | <strong>YT Automation Labs</strong>
+        &copy; MovieTime API Documentation | Built for <strong>YT Automation Labs</strong>
     </div>
-</div>
+</main>
 
 </body>
 </html>
