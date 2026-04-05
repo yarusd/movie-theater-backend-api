@@ -479,7 +479,7 @@ app.post('/api/payments/checkout', (req, res) => {
     };
 
     ORDERS.push(order);
-    res.status(201).json({ message: "Booking and payment successful!", order });
+    res.status(201).json({ message: "Payment successful!", order });
 });
 
 // ולידציה 4: הגנת IDOR
