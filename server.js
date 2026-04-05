@@ -37,7 +37,12 @@ const isExpired = (expiry) => {
     const now = new Date();
     const currentMonth = now.getMonth() + 1;
     const currentYear = parseInt(now.getFullYear().toString().slice(-2));
-    return year < currentYear || (year === currentYear && month < currentMonth);
+    const maxYear = currentYear + 10;
+
+    // בדיקה אם עבר התוקף או אם השנה רחוקה מדי (מעל 10 שנים)
+    if (year < currentYear || (year === currentYear && month < currentMonth)) return true;
+    if (year > maxYear) return true; 
+    return false;
 };
 
 // ── 3. VALIDATION SCHEMAS ──
@@ -78,23 +83,24 @@ const loginSchema = Joi.object({
 const orderSchema = Joi.object({
     userId: Joi.number().required(),
     movieId: Joi.number().required(),
+    // חובה: כמות כרטיסים (1-8)
+    ticketCount: Joi.number().min(1).max(8).required(),
     seats: Joi.array().items(Joi.string().pattern(/^[A-E][1-8]$/)).min(1).max(8).required(),
-    date: Joi.date().iso().min('now').required().messages({
-        'date.min': 'Booking date cannot be in the past.',
-        'date.format': 'Date must be in YYYY-MM-DD format.'
-    }),
+    // עדכון 2: פורמט תאריך עם סלאשים DD/MM/YYYY
+    date: Joi.string().pattern(/^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[012])\/(202[5-9]|2030)$/).required()
+        .messages({ 'string.pattern.base': 'Date must be in DD/MM/YYYY format' }),
     time: Joi.string().pattern(/^([0-9]{2}):([0-9]{2})$/).required()
 });
 
 const paymentSchema = Joi.object({
     userId: Joi.number().required(),
     movieId: Joi.number().required(),
+    ticketCount: Joi.number().min(1).max(8).required(),
     seats: Joi.array().items(Joi.string().pattern(/^[A-E][1-8]$/)).min(1).max(8).required(),
-    date: Joi.date().iso().min('now').required(),
+    totalPrice: Joi.number().min(35).required(), // וודאנו שדה מחיר
+    date: Joi.string().pattern(/^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[012])\/(202[5-9]|2030)$/).required(),
     time: Joi.string().pattern(/^([0-9]{2}):([0-9]{2})$/).required(),
-    // עדכון: רק אותיות באנגלית ורווחים (מניעת עברית ותווים מיוחדים)
-    cardHolder: Joi.string().pattern(/^[a-zA-Z\s]+$/).min(3).max(50).required()
-        .messages({ 'string.pattern.base': 'Card holder name must contain English letters only.' }),
+    cardHolder: Joi.string().pattern(/^[a-zA-Z\s]+$/).min(3).max(50).required(),
     cardNumber: Joi.string().pattern(/^[0-9]{16}$/).required(),
     expiry: Joi.string().pattern(/^(0[1-9]|1[0-2])\/([0-9]{2})$/).required(),
     cvv: Joi.string().pattern(/^[0-9]{3}$/).required()
@@ -342,6 +348,13 @@ app.post('/api/orders', (req, res) => {
     const { error, value } = orderSchema.validate(req.body);
     if (error) return res.status(400).json({ error: "Bad Request", message: error.details[0].message });
 
+    // בדיקת אחידות (בעיה 1): האם ticketCount תואם לכמות המושבים?
+    if (value.ticketCount !== value.seats.length) {
+        return res.status(400).json({ 
+            error: "Data Mismatch", 
+            message: `ticketCount (${value.ticketCount}) does not match seats selected (${value.seats.length}).` 
+        });
+    }
     const user = TEST_USERS.find(u => u.id === value.userId);
     if (!user) return res.status(401).json({ error: "Unauthorized", message: "User not found." });
 
@@ -354,8 +367,12 @@ app.post('/api/orders', (req, res) => {
     );
 
     if (isTaken) return res.status(409).json({ error: "Conflict", message: "Seats already booked." });
-
-    const order = { orderId: `ORD-${Date.now()}`, ...value, status: "confirmed" };
+    const order = { 
+        orderId: `ORD-${Date.now()}`, 
+        ...value, 
+        status: "confirmed",
+        message: "Reservation created successfully!" 
+    };
     ORDERS.push(order);
     res.status(201).json(order);
 });
@@ -364,30 +381,35 @@ app.post('/api/orders', (req, res) => {
 app.post('/api/payments/pay-existing', (req, res) => {
     const { orderId, cardHolder, cardNumber, expiry, cvv } = req.body;
 
-    // 1. חיפוש ההזמנה
+    // 1. חיפוש ההזמנה במערך
     const order = ORDERS.find(o => o.orderId === orderId);
     if (!order) return res.status(404).json({ error: "Not Found", message: "Order ID not found." });
 
-    // 2. בדיקה אם כבר שולם
+    // 2. בדיקת Conflict - מניעת תשלום כפול
     if (order.paymentStatus === 'paid') {
         return res.status(409).json({ error: "Conflict", message: "This order is already paid." });
     }
 
-    // 3. ולידציה בסיסית לאשראי (שימוש בלוגיקה הקיימת שלנו)
+    // 3. ולידציית כרטיס אשראי (שימוש בלוגיקה הקשוחה שלנו)
     if (isExpired(expiry)) {
-        return res.status(402).json({ error: "Payment Required", code: "CARD_EXPIRED" });
-    }
-    if (cardNumber.startsWith("0000")) {
-        return res.status(402).json({ error: "Payment Required", code: "INSUFFICIENT_FUNDS" });
+        return res.status(402).json({ error: "Payment Required", code: "CARD_EXPIRED", message: "Card has expired" });
     }
 
-    // 4. חישוב מחיר ועדכון
+    // סימולציית דחיית תשלום
+    if (cardNumber.startsWith("0000")) {
+        return res.status(402).json({ error: "Payment Required", code: "INSUFFICIENT_FUNDS", message: "Insufficient balance" });
+    }
+
+    // 4. חישוב מחיר סופי בשרת (לפי המושבים שנשמרו בהזמנה המקורית)
     const totalAmount = order.seats.reduce((sum, seat) => sum + getSeatPrice(seat), 0);
     
+    // 5. עדכון הסטטוס של האובייקט הקיים (Mutation)
     order.paymentStatus = 'paid';
     order.totalAmount = `₪${totalAmount.toFixed(2)}`;
+    order.cardHolder = cardHolder; // שמירת שם המשלם לעדכון
     order.transactionId = `TXN-PAY-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 
+    // 6. תגובה מפורטת (מסונכרן עם הדוקומנטציה)
     res.status(200).json({ 
         message: "Reservation successfully converted to paid order!", 
         order 
@@ -396,19 +418,31 @@ app.post('/api/payments/pay-existing', (req, res) => {
 
 // ── POST: SECURE CHECKOUT WITH TIERED PRICING ──
 app.post('/api/payments/checkout', (req, res) => {
+    // 1. ולידציה של השדות (כולל ticketCount החדש שנוסיף ל-Schema)
     const { error, value } = paymentSchema.validate(req.body);
     if (error) return res.status(400).json({ error: "Validation Failed", message: error.details[0].message });
 
+    // 2. בדיקת התאמה בין כמות הכרטיסים המוצהרת למושבים בפועל (בדיקת QA קריטית)
+    if (value.ticketCount !== value.seats.length) {
+        return res.status(400).json({ 
+            error: "Data Mismatch", 
+            message: `Declared ticketCount (${value.ticketCount}) does not match the number of seats selected (${value.seats.length}).` 
+        });
+    }
+
+    // 3. בדיקת תוקף כרטיס
     if (isExpired(value.expiry)) {
         return res.status(402).json({ error: "Payment Required", code: "CARD_EXPIRED", message: "הכרטיס פג תוקף" });
     }
 
+    // 4. בדיקת זמינות מושבים
     const isTaken = ORDERS.some(o => 
         o.movieId === value.movieId && o.date === value.date && o.time === value.time &&
         o.seats.some(s => value.seats.includes(s))
     );
     if (isTaken) return res.status(409).json({ error: "Conflict", message: "Seats already booked." });
 
+    // 5. סימולציות דחיית תשלום (מעולה לבדיקות)
     if (value.cardNumber.startsWith("0000")) {
         return res.status(402).json({ error: "Payment Required", code: "INSUFFICIENT_FUNDS", message: "אין מספיק יתרה בחשבון" });
     }
@@ -416,12 +450,15 @@ app.post('/api/payments/checkout', (req, res) => {
         return res.status(402).json({ error: "Payment Required", code: "SECURITY_REJECTION", message: "העסקה נחסמה עקב חשד להונאה" });
     }
 
+    // 6. חישוב מחיר סופי בשרת (כדי לוודא שהמשתמש לא "זייף" מחיר ב-Frontend)
     const totalAmount = value.seats.reduce((sum, seat) => sum + getSeatPrice(seat), 0);
 
+    // 7. יצירת האובייקט הסופי
     const order = { 
         orderId: `PAY-${Date.now()}`, 
         userId: value.userId,
         movieId: value.movieId,
+        ticketCount: value.ticketCount, // הוספנו כאן
         seats: value.seats,
         date: value.date,
         time: value.time,
@@ -434,7 +471,6 @@ app.post('/api/payments/checkout', (req, res) => {
     ORDERS.push(order);
     res.status(201).json({ message: "Payment successful!", order });
 });
-
 
 // ולידציה 4: הגנת IDOR
 app.get('/api/orders/:userId', (req, res) => {
@@ -455,10 +491,22 @@ app.get('/api/orders/:userId', (req, res) => {
 // ולידציה 5: ביטול הזמנה
 app.delete('/api/orders/:orderId', (req, res) => {
     const { orderId } = req.params;
+    const authenticatedUserId = req.headers['x-user-id']; // מזהה המשתמש מה-Header
+
     const orderIndex = ORDERS.findIndex(o => o.orderId === orderId);
     
     if (orderIndex === -1) {
         return res.status(404).json({ error: "Not Found", message: "Order not found." });
+    }
+
+    const order = ORDERS[orderIndex];
+
+    // --- הגנת IDOR: בדיקה שהמבטל הוא בעל ההזמנה ---
+    if (authenticatedUserId && parseInt(authenticatedUserId) !== order.userId) {
+        return res.status(403).json({ 
+            error: "Forbidden", 
+            message: "IDOR Attempt Detected: You cannot cancel another user's order." 
+        });
     }
     
     ORDERS.splice(orderIndex, 1);

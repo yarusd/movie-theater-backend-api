@@ -276,22 +276,22 @@
             </tbody>
         </table>
 
-        <h4>Request Body:</h4>
-        <pre>{
+            <h4>Request Body:</h4>
+            <pre>{
   "email": "user1@test.com",
   "password": "123456"
 }</pre>
 
-        <h4>Response (200 OK):</h4>
-        <pre>{
+            <h4>Response (200 OK):</h4>
+            <pre>{
   "id": 1,
   "name": "Alice Cohen",
   "email": "user1@test.com",
   "role": "user",
   "locked": false
 }</pre>
-    </div>
-</section>
+            </div>
+        </section>
 
         <section id="post-movies" class="content-section">
             <div class="endpoint post">
@@ -310,56 +310,106 @@
             </div>
         </section>
 
-        <section id="post-orders" class="content-section">
+       <section id="post-orders" class="content-section">
             <div class="endpoint post">
-                <span class="method m-post">POST</span> <code>/orders</code>
+                <div class="fbet">
+                    <div>
+                        <span class="method m-post">POST</span> <code>/orders</code>
+                    </div>
+                    <span class="tm">Create Reservation</span>
+                </div>
+                
                 <h3>Free Reservation</h3>
+                <p>Create a temporary seat booking. Note: ticketCount must match seats array length.</p>
+
                 <h4>Request Body:</h4>
                 <pre>{
   "userId": 1,
   "movieId": 25,
-  "seats": ["B1"],
-  "date": "2026-10-10",
+  "ticketCount": 2,
+  "seats": ["B1", "B2"],
+  "date": "10/10/2026",
   "time": "20:00"
 }</pre>
+        
                 <h4>Response (201 Created):</h4>
-                <pre>{ "orderId": "ORD-17112345", "status": "confirmed" }</pre>
+                <pre>{ 
+  "orderId": "ORD-17112345", 
+  "status": "confirmed",
+  "message": "Reservation created successfully!",
+  "userId": 1,
+  "movieId": 25,
+  "ticketCount": 2,
+  "seats": ["B1", "B2"],
+  "date": "10/10/2026",
+  "time": "20:00"
+}</pre>
             </div>
         </section>
 
-        <section id="pay-existing" class="content-section">
-            <div class="endpoint post" style="border-left-color: var(--accent);">
-                <span class="method m-post" style="background: var(--accent);">POST</span> <code>/payments/pay-existing</code>
-                <h3>Payment for Reservation</h3>
-                <h4>Request Body:</h4>
-                <pre>{
+      <section id="pay-existing" class="content-section">
+        <div class="endpoint post" style="border-left-color: var(--accent);">
+            <span class="method m-post" style="background: var(--accent);">POST</span> <code>/payments/pay-existing</code>
+            <h3>Payment for Reservation</h3>
+            <p>Convert an existing unpaid reservation (ORD-...) into a confirmed paid order.</p>
+            
+            <h4>Request Body:</h4>
+            <pre>{
   "orderId": "ORD-17112345",
   "cardHolder": "Adam Norado",
-  "cardNumber": "1234567812345678",
+  "cardNumber": "4580123456789012",
   "expiry": "12/28",
-  "cvv": "987"
+  "cvv": "123"
 }</pre>
-                <h4>Response (200 OK):</h4>
-                <pre>{
+
+            <h4>Response (200 OK):</h4>
+            <pre>{
   "message": "Reservation successfully converted to paid order!",
-  "order": { "orderId": "ORD-17112345", "paymentStatus": "paid", "totalAmount": "₪70.00" }
+  "order": {
+    "orderId": "ORD-17112345",
+    "userId": 1,
+    "movieId": 25,
+    "seats": ["B1", "B2"],
+    "status": "confirmed",
+    "paymentStatus": "paid",
+    "totalAmount": "₪100.00",
+    "transactionId": "TXN-PAY-A1B2C3D4"
+  }
 }</pre>
             </div>
         </section>
 
-        <section id="checkout" class="content-section">
+       <section id="checkout" class="content-section">
             <div class="endpoint post" style="border-left-color: var(--accent);">
                 <span class="method m-post" style="background: var(--accent);">POST</span> <code>/payments/checkout</code>
                 <h3>Secure Paid Checkout</h3>
+                <p>Complete booking and payment in one atomic request.</p>
+                
                 <h4>Request Body:</h4>
                 <pre>{
-  "userId": 1, "movieId": 25, "seats": ["E1"],
-  "cardHolder": "Neomi Levi", "cardNumber": "1234567812345678",
-  "expiry": "12/28", "cvv": "123", "date": "2026-12-01", "time": "19:00"
+  "userId": 1,
+  "movieId": 25,
+  "ticketCount": 1,
+  "seats": ["A1"],
+  "totalPrice": 65,
+  "cardHolder": "Neomi Levi",
+  "cardNumber": "4580123456789012",
+  "expiry": "12/28",
+  "cvv": "123",
+  "date": "01/12/2026",
+  "time": "19:00"
 }</pre>
                 <h4>Response (201 Created):</h4>
-                <pre>{ "message": "Tickets booked!", "order": { "totalAmount": "₪65.00", "transactionId": "TXN-999" } }</pre>
-            </div>
+                <pre>{ 
+  "message": "Payment successful!", 
+  "order": { 
+    "orderId": "PAY-17112345", 
+    "totalAmount": "₪65.00", 
+    "paymentStatus": "paid",
+    "transactionId": "TXN-A1B2C3D4E"
+  } 
+}</pre>
+                </div>
         </section>
 
         <section id="put-movie" class="content-section">
