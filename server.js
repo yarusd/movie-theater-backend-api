@@ -407,8 +407,13 @@ app.post('/api/payments/pay-existing', (req, res) => {
     }
 
     // 3. ולידציית תוקף - שינוי ל-400 כדי להתאים ל-checkout ולטסטים
+    // שינוי מ-400 ל-402
     if (isExpired(expiry)) {
-        return res.status(400).json({ error: "Bad Request", code: "CARD_EXPIRED", message: "Card expired" });
+        return res.status(402).json({ 
+            error: "Payment Required", // שיניתי גם את הסטרינג ליתר ביטחון
+            code: "CARD_EXPIRED", 
+            message: "Card expired" 
+        });
     }
 
     // 4. סימולציית דחייה + ניקוי רווחים (מטפל ב-"0000 0000...")
@@ -435,7 +440,6 @@ app.post('/api/payments/pay-existing', (req, res) => {
 // ── POST: SECURE CHECKOUT WITH TIERED PRICING ──
 app.post('/api/payments/checkout', (req, res) => {
     const { error, value } = paymentSchema.validate(req.body);
-    
     if (error) {
         return res.status(400).json({ error: "Bad Request", message: error.details[0].message });
     }
@@ -460,8 +464,13 @@ app.post('/api/payments/checkout', (req, res) => {
     }
 
     // בדיקת תוקף כרטיס - נחזיר 402 כדי להתאים לטסטים שלך
+    // שינוי מ-400 ל-402
     if (isExpired(expiry)) {
-        return res.status(402).json({ error: "Bad Request", code: "CARD_EXPIRED", message: "Card expired" });
+        return res.status(402).json({ 
+            error: "Payment Required", // שיניתי גם את הסטרינג ליתר ביטחון
+            code: "CARD_EXPIRED", 
+            message: "Card expired" 
+        });
     }
 
     // ניקוי רווחים למספר כרטיס וסימולציית חוסר יתרה
