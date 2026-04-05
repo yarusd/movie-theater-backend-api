@@ -86,9 +86,9 @@ const orderSchema = Joi.object({
     // חובה: כמות כרטיסים (1-8)
     ticketCount: Joi.number().min(1).max(8).required(),
     seats: Joi.array().items(Joi.string().pattern(/^[A-E][1-8]$/)).min(1).max(8).required(),
-    // עדכון 2: פורמט תאריך עם סלאשים DD/MM/YYYY
-    date: Joi.string().pattern(/^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[012])\/(202[5-9]|2030)$/).required()
-        .messages({ 'string.pattern.base': 'Date must be in DD/MM/YYYY format' }),
+    // עדכון: פורמט תאריך DD/MM/YYYY החל מ-2024 ועד 2030
+    date: Joi.string().pattern(/^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[012])\/(202[4-9]|2030)$/).required()
+        .messages({ 'string.pattern.base': 'Date must be in DD/MM/YYYY format (2024-2030)' }),
     time: Joi.string().pattern(/^([0-9]{2}):([0-9]{2})$/).required()
 });
 
@@ -97,7 +97,7 @@ const paymentSchema = Joi.object({
     movieId: Joi.number().required(),
     ticketCount: Joi.number().min(1).max(8).required(),
     seats: Joi.array().items(Joi.string().pattern(/^[A-E][1-8]$/)).min(1).max(8).required(),
-    date: Joi.string().pattern(/^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[012])\/(202[5-9]|2030)$/).required(),
+    date: Joi.string().pattern(/^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[012])\/(202[4-9]|2030)$/).required(),
     time: Joi.string().pattern(/^([0-9]{2}):([0-9]{2})$/).required(),
     cardHolder: Joi.string().pattern(/^[a-zA-Z\s]+$/).min(3).max(50).required(),
     cardNumber: Joi.string().pattern(/^[0-9]{16}$/).required(),
@@ -344,34 +344,47 @@ app.delete('/api/movies/:id', requireApiKey, (req, res) => {
 // ── 8. ORDERS ──
 
 app.post('/api/orders', (req, res) => {
+    // 1. הרצת הוולידציה של ה-orderSchema המעודכן (עם הסלאשים וה-ticketCount)
     const { error, value } = orderSchema.validate(req.body);
-    if (error) return res.status(400).json({ error: "Bad Request", message: error.details[0].message });
+    
+    if (error) {
+        return res.status(400).json({ 
+            error: "Bad Request", 
+            message: error.details[0].message 
+        });
+    }
 
-    // בדיקת אחידות (בעיה 1): האם ticketCount תואם לכמות המושבים?
+    // 2. בדיקת QA קריטית: האם מספר המושבים במערך תואם לכמות שהוצהרה ב-ticketCount?
     if (value.ticketCount !== value.seats.length) {
         return res.status(400).json({ 
             error: "Data Mismatch", 
             message: `ticketCount (${value.ticketCount}) does not match seats selected (${value.seats.length}).` 
         });
     }
+
+    // 3. בדיקת קיום משתמש וסרט (לוגיקה עסקית)
     const user = TEST_USERS.find(u => u.id === value.userId);
     if (!user) return res.status(401).json({ error: "Unauthorized", message: "User not found." });
 
     const movie = MOVIES.find(m => m.id === value.movieId);
     if (!movie) return res.status(404).json({ error: "Not Found", message: "Movie not found." });
 
+    // 4. בדיקת Conflict - האם המושבים כבר תפוסים?
     const isTaken = ORDERS.some(o => 
         o.movieId === value.movieId && o.date === value.date && o.time === value.time &&
         o.seats.some(s => value.seats.includes(s))
     );
 
     if (isTaken) return res.status(409).json({ error: "Conflict", message: "Seats already booked." });
+
+    // 5. יצירת ההזמנה (Reservation)
     const order = { 
         orderId: `ORD-${Date.now()}`, 
         ...value, 
         status: "confirmed",
         message: "Reservation created successfully!" 
     };
+
     ORDERS.push(order);
     res.status(201).json(order);
 });
@@ -416,38 +429,56 @@ app.post('/api/payments/pay-existing', (req, res) => {
 });
 
 // ── POST: SECURE CHECKOUT WITH TIERED PRICING ──
+// ── POST: SECURE CHECKOUT WITH TIERED PRICING ──
 app.post('/api/payments/checkout', (req, res) => {
-    // הסרנו את totalPrice מה-destructuring של req.body
-    const { userId, movieId, seats, cardHolder, cardNumber, expiry, cvv, date, time } = req.body;
-
-    // 1. ולידציה בסיסית (בדיקה שכל השדות קיימים)
-    if (!userId || !movieId || !seats || !cardNumber || !expiry) {
-        return res.status(400).json({ error: "Bad Request", message: "Missing required payment or booking fields." });
+    // 1. הרצת הוולידציה של Joi (כאן היתה הבעיה - השורה הזו היתה חסרה!)
+    // אנחנו מוודאים שכל השדות בפורמט הנכון (Regex, אורך וכו')
+    const { error, value } = paymentSchema.validate(req.body);
+    
+    if (error) {
+        return res.status(400).json({ 
+            error: "Bad Request", 
+            message: error.details[0].message 
+        });
     }
 
-    // 2. חישוב המחיר בשרת (לוגיקה עסקית מאובטחת)
-    const calculatedTotal = seats.reduce((sum, seat) => sum + getSeatPrice(seat), 0);
+    // 2. חילוץ הנתונים מה-value המאומת (Joi כבר ניקה אותו עבורנו)
+    const { userId, movieId, seats, ticketCount, expiry, cardNumber, date, time } = value;
 
-    // 3. ולידציית אשראי
+    // 3. בדיקת QA קריטית: התאמה בין כמות מוצהרת למושבים בפועל
+    if (ticketCount !== seats.length) {
+        return res.status(400).json({ 
+            error: "Data Mismatch", 
+            message: `ticketCount (${ticketCount}) does not match seats selected (${seats.length}).` 
+        });
+    }
+
+    // 4. בדיקת תוקף כרטיס (לוגיקה עסקית)
     if (isExpired(expiry)) {
         return res.status(402).json({ error: "Payment Required", code: "CARD_EXPIRED" });
     }
+
+    // 5. סימולציית דחיות תשלום לפי מספר כרטיס
     if (cardNumber.startsWith("0000")) {
         return res.status(402).json({ error: "Payment Required", code: "INSUFFICIENT_FUNDS" });
     }
 
-    // 4. יצירת האובייקט
+    // 6. חישוב מחיר סופי בשרת (כדי למנוע זיוף מחיר מה-Client)
+    const calculatedTotal = seats.reduce((sum, seat) => sum + getSeatPrice(seat), 0);
+
+    // 7. יצירת האובייקט ב"דאטה-בייס"
     const newOrder = {
-        orderId: `ORD-${Math.floor(Math.random() * 100000000)}`,
+        orderId: `PAY-${Date.now()}`,
         userId,
         movieId,
         seats,
+        ticketCount,
         status: "confirmed",
         paymentStatus: "paid",
-        totalAmount: `₪${calculatedTotal.toFixed(2)}`, // שימוש במחיר שחושב בשרת
+        totalAmount: `₪${calculatedTotal.toFixed(2)}`,
         transactionId: `TXN-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
-        bookingDate: date,
-        bookingTime: time
+        date,
+        time
     };
 
     ORDERS.push(newOrder);
