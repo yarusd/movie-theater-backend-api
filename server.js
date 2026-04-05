@@ -446,34 +446,34 @@ app.post('/api/payments/checkout', (req, res) => {
 
     const { userId, movieId, seats, ticketCount, expiry, cardNumber, date, time } = value;
 
-    // בדיקת קיום משתמש - מחזיר 404 לפי הטסטים
-    // בדיקת קיום משתמש
     const user = TEST_USERS.find(u => u.id === userId);
-    if (!user) {
-        return res.status(404).json({ error: "Not Found", message: "User not found." });
-    }
+    if (!user) return res.status(404).json({ error: "Not Found", message: "User not found." });
 
-    // בדיקת קיום סרט
     const movie = MOVIES.find(m => m.id === movieId);
-    if (!movie) {
-        return res.status(404).json({ error: "Not Found", message: "Movie not found." });
-    }
+    if (!movie) return res.status(404).json({ error: "Not Found", message: "Movie not found." });
 
     if (ticketCount !== seats.length) {
         return res.status(400).json({ error: "Data Mismatch", message: "ticketCount mismatch." });
     }
 
-    // בדיקת תוקף כרטיס - נחזיר 402 כדי להתאים לטסטים שלך
-    // שינוי מ-400 ל-402
-    if (isExpired(expiry)) {
-        return res.status(402).json({ 
-            error: "Payment Required", // שיניתי גם את הסטרינג ליתר ביטחון
-            code: "CARD_EXPIRED", 
-            message: "Card expired" 
-        });
+    // --- תיקון ל-T18: בדיקה שאין מושבים כפולים בתוך אותה בקשה (למשל ["A1", "A1"]) ---
+    const uniqueSeats = new Set(seats);
+    if (uniqueSeats.size !== seats.length) {
+        return res.status(409).json({ error: "Conflict", message: "Duplicate seats in request." });
     }
 
-    // ניקוי רווחים למספר כרטיס וסימולציית חוסר יתרה
+    // בדיקה אם המושבים כבר תפוסים במערכת
+    const isTaken = ORDERS.some(o => 
+        o.movieId === movieId && o.date === date && o.time === time &&
+        o.seats.some(s => seats.includes(s))
+    );
+    if (isTaken) return res.status(409).json({ error: "Conflict", message: "Seats already booked." });
+
+    // --- תיקון ל-T29 ו-T32: שינוי סטטוס ל-402 עבור בעיות תשלום ---
+    if (isExpired(expiry)) {
+        return res.status(402).json({ error: "Payment Required", code: "CARD_EXPIRED", message: "Card expired" });
+    }
+
     const cleanCard = cardNumber.replace(/\s/g, "");
     if (cleanCard.startsWith("0000")) {
         return res.status(402).json({ error: "Payment Required", code: "INSUFFICIENT_FUNDS" });
