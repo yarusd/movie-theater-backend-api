@@ -226,37 +226,44 @@ app.get('/api/movies', (req, res) => {
 
     // --- שכבת הולידציה (החסימות ב-400) ---
 
-    // 1. חסימת מחרוזות ארוכות מדי (מניעת Buffer Overflow/DoS)
-    const MAX_QUERY_LENGTH = 100;
-    const allParams = [q, title, cast, genre, badge];
-    if (allParams.some(param => param && param.length > MAX_QUERY_LENGTH)) {
+    const MIN_LENGTH = 2;
+    const MAX_LENGTH = 50;
+    const specialCharsRegex = /[!@#$%^&*(),.?":{}|<>]/;
+
+    // רשימת הפרמטרים לבדיקה טקסטואלית
+    const searchParams = { q, title, cast, genre };
+
+    for (const [key, value] of Object.entries(searchParams)) {
+        if (value) {
+            // 1. חסימת מחרוזות ארוכות מדי או קצרות מדי
+            if (value.length < MIN_LENGTH || value.length > MAX_LENGTH) {
+                return res.status(400).json({ 
+                    error: "Bad Request", 
+                    message: `Search parameter '${key}' must be between ${MIN_LENGTH} and ${MAX_LENGTH} characters.` 
+                });
+            }
+
+            // 2. חסימת תווים מיוחדים מסוכנים (סניטציה)
+            if (specialCharsRegex.test(value)) {
+                return res.status(400).json({ 
+                    error: "Bad Request", 
+                    message: `Search parameter '${key}' contains invalid special characters.` 
+                });
+            }
+        }
+    }
+
+    // 3. חסימת חיפוש ריק (בדיקה אם המפתח נשלח ללא ערך)
+    const keysSent = Object.keys(req.query);
+    const emptyParam = keysSent.find(key => req.query[key] === "");
+    if (emptyParam) {
         return res.status(400).json({ 
             error: "Bad Request", 
-            message: "Search query is too long. Max 100 characters." 
+            message: `Search parameter '${emptyParam}' cannot be empty.` 
         });
     }
 
-    // 2. חסימת חיפוש ריק (אם הפרמטר נשלח אבל הוא ריק)
-    // בודק אם שלחו ?q= או ?genre= בלי ערך
-    if ((req.query.hasOwnProperty('q') && !q) || 
-        (req.query.hasOwnProperty('genre') && !genre) || 
-        (req.query.hasOwnProperty('title') && !title)) {
-        return res.status(400).json({ 
-            error: "Bad Request", 
-            message: "Search parameters cannot be empty." 
-        });
-    }
-
-    // 3. חסימת תווים מיוחדים מסוכנים (סניטציה בסיסית)
-    const specialCharsRegex = /[!@#$%^&*(),.?":{}|<>]/g;
-    if (q && specialCharsRegex.test(q)) {
-        return res.status(400).json({ 
-            error: "Bad Request", 
-            message: "Search query contains invalid special characters." 
-        });
-    }
-
-    // בדיקת Year הקיימת (השארתי כפי שהיה)
+    // 4. בדיקת Year (צריך להיות מספר)
     if (year && isNaN(parseInt(year))) {
         return res.status(400).json({ error: "Bad Request", message: "Year must be a number" });
     }
@@ -270,12 +277,10 @@ app.get('/api/movies', (req, res) => {
     }
     
     if (cast) {
-        result = result.filter(m => m.cast && m.cast.some(a => a.toLowerCase().includes(cast.toLowerCase())));
+        result = result.filter(m => m.cast && m.cast.some(a => String(a).toLowerCase().includes(cast.toLowerCase())));
     }
 
     if (genre) {
-        // לגבי סעיף 3 שביקשת שאחליט: 
-        // החלטתי להפוך את זה ל"חיפוש קשוח" - אם הז'אנר לא קיים בכלל במערכת, נחזיר 404
         const availableGenres = [...new Set(MOVIES.map(m => m.genre.toLowerCase()))];
         if (!availableGenres.includes(genre.toLowerCase())) {
             return res.status(404).json({ 
@@ -293,7 +298,7 @@ app.get('/api/movies', (req, res) => {
         result = result.filter(m => 
             m.title.toLowerCase().includes(query) || 
             m.genre.toLowerCase().includes(query) || 
-            (m.cast && m.cast.some(actor => actor.toLowerCase().includes(query)))
+            (m.cast && m.cast.some(actor => String(actor).toLowerCase().includes(query)))
         );
     }
     
@@ -307,7 +312,7 @@ app.get('/api/movies', (req, res) => {
             if (typeof a[sort] === 'number') return b[sort] - a[sort];
             return String(a[sort]).localeCompare(String(b[sort]));
         });
-    }    
+    } 
     
     res.json(result);
 });
