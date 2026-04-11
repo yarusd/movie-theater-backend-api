@@ -277,11 +277,20 @@ app.get('/api/movies', (req, res) => {
     }
 
     // --- לוגיקת מיון ---
+    // --- לוגיקת מיון ---
     if (sort && result.length > 1) {
         result.sort((a, b) => typeof a[sort] === 'number' ? b[sort] - a[sort] : String(a[sort]).localeCompare(String(b[sort])));
     } 
     
-    res.json(result);
+    // --- התיקון החדש: בדיקה אם נשארו תוצאות ---
+    if (result.length === 0) {
+        return res.status(400).json({ 
+            error: "Bad Request", 
+            message: "No movies found matching the combined criteria." 
+        });
+    }
+
+    res.json(result); // אם יש תוצאות, החזר אותן כרגיל
 });
 
 app.get('/api/movies/:id/occupied', (req, res) => {
