@@ -228,8 +228,7 @@ app.get('/api/movies', (req, res) => {
 
     const MIN_LENGTH = 2;
     const MAX_LENGTH = 50;
-    const specialCharsRegex = /[!@#$%^&*(),.?":{}|<>]/;
-
+    const specialCharsRegex = /[!@#$%^&*()"{}+|<>]/;
     // רשימת הפרמטרים לבדיקה טקסטואלית
     const searchParams = { q, title, cast, genre };
 
