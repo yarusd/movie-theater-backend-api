@@ -221,96 +221,64 @@ app.post('/api/login', (req, res) => {
 // ── 7. MOVIE ROUTES ──
 
 app.get('/api/movies', (req, res) => {
-    let result = JSON.parse(JSON.stringify(MOVIES));
-    const { q, title, cast, genre, year, id, badge, sort } = req.query;
+    let result = [...MOVIES]; // העתקה פשוטה ומהירה
+    const { sort, year, id, badge, ...textFilters } = req.query;
 
-    // --- שכבת הולידציה (החסימות ב-400) ---
+    // 1. ולידציה: הפרדה בין מיון לסינון
+    const hasFilters = Object.keys(req.query).some(key => key !== 'sort');
+    if (sort && hasFilters) {
+        return res.status(400).json({ error: "Bad Request", message: "Cannot combine 'sort' with filtering." });
+    }
 
-    const MIN_LENGTH = 2;
-    const MAX_LENGTH = 50;
+    // 2. לולאת ולידציה מאוחדת (ריק, אורך, תווים מיוחדים)
     const specialCharsRegex = /[!@#$%^&*()"{}+|<>]/;
-    // רשימת הפרמטרים לבדיקה טקסטואלית
-    const searchParams = { q, title, cast, genre };
-
-    for (const [key, value] of Object.entries(searchParams)) {
-        if (value) {
-            // 1. חסימת מחרוזות ארוכות מדי או קצרות מדי
-            if (value.length < MIN_LENGTH || value.length > MAX_LENGTH) {
-                return res.status(400).json({ 
-                    error: "Bad Request", 
-                    message: `Search parameter '${key}' must be between ${MIN_LENGTH} and ${MAX_LENGTH} characters.` 
-                });
+    for (const [key, value] of Object.entries(req.query)) {
+        if (value === "") return res.status(400).json({ error: "Bad Request", message: `Parameter '${key}' cannot be empty.` });
+        
+        if (['q', 'title', 'cast', 'genre'].includes(key) && value) {
+            if (value.length < 2 || value.length > 50) {
+                return res.status(400).json({ error: "Bad Request", message: `'${key}' must be 2-50 chars.` });
             }
-
-            // 2. חסימת תווים מיוחדים מסוכנים (סניטציה)
             if (specialCharsRegex.test(value)) {
-                return res.status(400).json({ 
-                    error: "Bad Request", 
-                    message: `Search parameter '${key}' contains invalid special characters.` 
-                });
+                return res.status(400).json({ error: "Bad Request", message: `'${key}' contains invalid characters.` });
             }
         }
     }
 
-    // 3. חסימת חיפוש ריק (בדיקה אם המפתח נשלח ללא ערך)
-    const keysSent = Object.keys(req.query);
-    const emptyParam = keysSent.find(key => req.query[key] === "");
-    if (emptyParam) {
-        return res.status(400).json({ 
-            error: "Bad Request", 
-            message: `Search parameter '${emptyParam}' cannot be empty.` 
-        });
-    }
+    // 3. ולידציה של שנה
+    if (year && isNaN(parseInt(year))) return res.status(400).json({ error: "Bad Request", message: "Year must be a number" });
 
-    // 4. בדיקת Year (צריך להיות מספר)
-    if (year && isNaN(parseInt(year))) {
-        return res.status(400).json({ error: "Bad Request", message: "Year must be a number" });
-    }
-
-    // --- שכבת הלוגיקה (החיפוש עצמו) ---
-
+    // --- לוגיקת סינון ---
     if (id) result = result.filter(m => m.id === parseInt(id));
-    
-    if (title) {
-        result = result.filter(m => m.title.toLowerCase().includes(title.toLowerCase()));
-    }
-    
-    if (cast) {
-        result = result.filter(m => m.cast && m.cast.some(a => String(a).toLowerCase().includes(cast.toLowerCase())));
-    }
-
-    if (genre) {
-        const availableGenres = [...new Set(MOVIES.map(m => m.genre.toLowerCase()))];
-        if (!availableGenres.includes(genre.toLowerCase())) {
-            return res.status(404).json({ 
-                error: "Not Found", 
-                message: `Genre '${genre}' does not exist in our database.` 
-            });
-        }
-        result = result.filter(m => m.genre.toLowerCase() === genre.toLowerCase());
-    }
-
     if (year) result = result.filter(m => m.year === parseInt(year));
+    if (badge) result = result.filter(m => m.badge === badge.toUpperCase().replace('-', ' '));
 
-    if (q) {
-        const query = q.toLowerCase();
+    if (textFilters.genre) {
+        const genre = textFilters.genre.toLowerCase();
+        if (!MOVIES.some(m => m.genre.toLowerCase() === genre)) {
+            return res.status(404).json({ error: "Not Found", message: `Genre '${genre}' not found.` });
+        }
+        result = result.filter(m => m.genre.toLowerCase() === genre);
+    }
+
+    if (textFilters.title) result = result.filter(m => m.title.toLowerCase().includes(textFilters.title.toLowerCase()));
+    
+    if (textFilters.cast) {
+        result = result.filter(m => m.cast?.some(a => String(a).toLowerCase().includes(textFilters.cast.toLowerCase())));
+    }
+
+    if (textFilters.q) {
+        const query = textFilters.q.toLowerCase();
         result = result.filter(m => 
             m.title.toLowerCase().includes(query) || 
             m.genre.toLowerCase().includes(query) || 
-            (m.cast && m.cast.some(actor => String(actor).toLowerCase().includes(query)))
+            m.cast?.some(a => String(a).toLowerCase().includes(query))
         );
     }
-    
-    if (badge) {
-        const normalizedBadge = badge.toUpperCase().replace('-', ' ');
-        result = result.filter(m => m.badge === normalizedBadge);
-    }
 
-    if (sort && result.length > 0) {
-        result.sort((a, b) => {
-            if (typeof a[sort] === 'number') return b[sort] - a[sort];
-            return String(a[sort]).localeCompare(String(b[sort]));
-        });
+    // --- לוגיקת מיון ---
+    if (sort && result.length > 1) {
+        result.sort((a, b) => typeof a[sort] === 'number' ? b[sort] - a[sort] : String(a[sort]).localeCompare(String(b[sort])));
     } 
     
     res.json(result);

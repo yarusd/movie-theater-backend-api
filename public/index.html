@@ -175,23 +175,36 @@
         <section id="get-movies-filtered" class="content-section">
             <div class="endpoint get">
                 <span class="method m-get">GET</span> <code>/movies?filters</code>
-                <h3>Advanced Filtering & Dynamic Sorting</h3>
-                <p>Use <code>?q=</code> for global search, or specific keys for precision. Combine with <code>?sort=</code> to order results.</p>
+                <h3>Advanced Filtering OR Dynamic Sorting</h3>
                 
+                <p>Use <code>?q=</code> for global search, or specific keys for precision. 
+                <strong>Note:</strong> Sorting and Filtering are mutually exclusive and cannot be combined.</p>
                 <table>
                     <tr><th>Param</th><th>Values</th><th>QA Target</th></tr>
                     <tr><td><code>?q=</code></td><td>Any text</td><td><strong>Global Search:</strong> Scans Title, Genre, Cast.</td></tr>
                     <tr><td><code>?title=</code></td><td>Movie Name</td><td>Search <strong>only</strong> in movie titles.</td></tr>
                     <tr><td><code>?cast=</code></td><td>Actor Name</td><td>Search <strong>only</strong> in actor names.</td></tr>
                     <tr><td><code>?genre=</code></td><td>Genre Name</td><td>Filter by exact genre (Action, Horror...).</td></tr>
-                    <tr><td><code>?sort=</code></td><td>rating, year, title</td><td>Sorts results by chosen field (high to low).</td></tr>
+                    <tr><td><code>?sort=</code></td><td>rating, year, title</td><td>Sorts <strong>entire</strong> database (high to low).</td></tr>
                 </table>
 
-                <h4>Example:</h4>
-                <code>GET /api/movies?genre=Action&sort=year</code>
-                
+                <code>GET /api/movies?title=Superman&year=1978</code>
+
                 <h4>Response (200 OK):</h4>
-                <pre>[ { "id": 1, "title": "ThunderBolts*", "year": 2025, "rating": 7.6 } ]</pre>
+                <pre>
+                [
+                {
+                    "id": 42,
+                    "title": "Superman",
+                    "year": 1978,
+                    "genre": "Action",
+                    "cast": ["Christopher Reeve", "Marlon Brando"],
+                    "rating": 7.3,
+                    "badge": "CLASSIC"
+                }
+                ]
+                </pre>
+
             </div>
         </section>
 
