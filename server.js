@@ -223,29 +223,71 @@ app.post('/api/login', (req, res) => {
 app.get('/api/movies', (req, res) => {
     let result = JSON.parse(JSON.stringify(MOVIES));
     const { q, title, cast, genre, year, id, badge, sort } = req.query;
-    
-    if (year && isNaN(parseInt(year))) return res.status(400).json({ error: "Bad Request", message: "Year must be a number" });
+
+    // --- שכבת הולידציה (החסימות ב-400) ---
+
+    // 1. חסימת מחרוזות ארוכות מדי (מניעת Buffer Overflow/DoS)
+    const MAX_QUERY_LENGTH = 100;
+    const allParams = [q, title, cast, genre, badge];
+    if (allParams.some(param => param && param.length > MAX_QUERY_LENGTH)) {
+        return res.status(400).json({ 
+            error: "Bad Request", 
+            message: "Search query is too long. Max 100 characters." 
+        });
+    }
+
+    // 2. חסימת חיפוש ריק (אם הפרמטר נשלח אבל הוא ריק)
+    // בודק אם שלחו ?q= או ?genre= בלי ערך
+    if ((req.query.hasOwnProperty('q') && !q) || 
+        (req.query.hasOwnProperty('genre') && !genre) || 
+        (req.query.hasOwnProperty('title') && !title)) {
+        return res.status(400).json({ 
+            error: "Bad Request", 
+            message: "Search parameters cannot be empty." 
+        });
+    }
+
+    // 3. חסימת תווים מיוחדים מסוכנים (סניטציה בסיסית)
+    const specialCharsRegex = /[!@#$%^&*(),.?":{}|<>]/g;
+    if (q && specialCharsRegex.test(q)) {
+        return res.status(400).json({ 
+            error: "Bad Request", 
+            message: "Search query contains invalid special characters." 
+        });
+    }
+
+    // בדיקת Year הקיימת (השארתי כפי שהיה)
+    if (year && isNaN(parseInt(year))) {
+        return res.status(400).json({ error: "Bad Request", message: "Year must be a number" });
+    }
+
+    // --- שכבת הלוגיקה (החיפוש עצמו) ---
 
     if (id) result = result.filter(m => m.id === parseInt(id));
     
-    // 1. חיפוש בכותרת (Case-Insensitive)
     if (title) {
         result = result.filter(m => m.title.toLowerCase().includes(title.toLowerCase()));
     }
     
-    // 2. חיפוש בשחקנים (Case-Insensitive)
     if (cast) {
         result = result.filter(m => m.cast && m.cast.some(a => a.toLowerCase().includes(cast.toLowerCase())));
     }
 
-    // 3. סינון לפי ז'אנר (השוואה בטוחה בין שני הצדדים)
     if (genre) {
+        // לגבי סעיף 3 שביקשת שאחליט: 
+        // החלטתי להפוך את זה ל"חיפוש קשוח" - אם הז'אנר לא קיים בכלל במערכת, נחזיר 404
+        const availableGenres = [...new Set(MOVIES.map(m => m.genre.toLowerCase()))];
+        if (!availableGenres.includes(genre.toLowerCase())) {
+            return res.status(404).json({ 
+                error: "Not Found", 
+                message: `Genre '${genre}' does not exist in our database.` 
+            });
+        }
         result = result.filter(m => m.genre.toLowerCase() === genre.toLowerCase());
     }
 
     if (year) result = result.filter(m => m.year === parseInt(year));
 
-    // 4. חיפוש חכם (Global Search) - הכל ב-Lower Case
     if (q) {
         const query = q.toLowerCase();
         result = result.filter(m => 
@@ -255,13 +297,11 @@ app.get('/api/movies', (req, res) => {
         );
     }
     
-    // 5. סינון Badge (נורמליזציה של הטקסט)
     if (badge) {
         const normalizedBadge = badge.toUpperCase().replace('-', ' ');
         result = result.filter(m => m.badge === normalizedBadge);
     }
 
-    // 6. מיון דינמי
     if (sort && result.length > 0) {
         result.sort((a, b) => {
             if (typeof a[sort] === 'number') return b[sort] - a[sort];
