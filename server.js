@@ -416,34 +416,57 @@ app.post('/api/orders', (req, res) => {
 app.post('/api/payments/pay-existing', (req, res) => {
     const { orderId, cardHolder, cardNumber, expiry, cvv } = req.body;
 
-    // 1. חיפוש ההזמנה
+    // 1. חיפוש ההזמנה (קיים)
     const order = ORDERS.find(o => o.orderId === orderId);
     if (!order) {
         return res.status(404).json({ error: "Not Found", message: "Order ID not found." });
     }
 
-    // 2. בדיקת Conflict
+    // 2. בדיקת Conflict (קיים)
     if (order.paymentStatus === 'paid') {
         return res.status(409).json({ error: "Conflict", message: "This order is already paid." });
     }
 
-    // 3. ולידציית תוקף - שינוי ל-400 כדי להתאים ל-checkout ולטסטים
-    // שינוי מ-400 ל-402
+    // --- 🟢 תוספת: ולידציית נתונים (פותר את רוב ה-Failures בטסטים) ---
+    
+    // בדיקת שדות חובה (פותר את T14.23 - Missing cardNumber)
+    if (!cardNumber || !cardHolder || !expiry || !cvv) {
+        return res.status(400).json({ error: "Bad Request", message: "Missing required payment fields." });
+    }
+
+    // ולידציית שם (פותר את T14.16 עד T14.20)
+    if (typeof cardHolder !== 'string' || cardHolder.trim().length < 3 || /[^a-zA-Z\s]/.test(cardHolder)) {
+        return res.status(400).json({ error: "Bad Request", message: "Invalid card holder name." });
+    }
+
+    // ולידציית אורך כרטיס (פותר את T14.21 ו-T14.22)
+    const cleanCardNumber = cardNumber.replace(/\s/g, "");
+    if (cleanCardNumber.length < 13 || cleanCardNumber.length > 19) {
+        return res.status(400).json({ error: "Bad Request", message: "Invalid card number length." });
+    }
+
+    // ולידציית CVV (פותר את T14.28 ו-T14.29)
+    if (cvv.length < 3 || cvv.length > 4 || isNaN(cvv)) {
+        return res.status(400).json({ error: "Bad Request", message: "Invalid CVV." });
+    }
+
+    // --- 🟢 סוף תוספת ולידציה ---
+
+    // 3. ולידציית תוקף (פותר את T14.25, T14.26)
     if (isExpired(expiry)) {
         return res.status(402).json({ 
-            error: "Payment Required", // שיניתי גם את הסטרינג ליתר ביטחון
+            error: "Payment Required", 
             code: "CARD_EXPIRED", 
             message: "Card expired" 
         });
     }
 
-    // 4. סימולציית דחייה + ניקוי רווחים (מטפל ב-"0000 0000...")
-    const cleanCardNumber = cardNumber ? cardNumber.replace(/\s/g, "") : "";
+    // 4. סימולציית דחייה (INSUFFICIENT_FUNDS)
     if (cleanCardNumber.startsWith("0000")) {
         return res.status(402).json({ error: "Payment Required", code: "INSUFFICIENT_FUNDS" });
     }
 
-    // 5. חישוב ועדכון (לוגיקה זהה)
+    // 5. חישוב ועדכון
     const totalAmount = order.seats.reduce((sum, seat) => sum + getSeatPrice(seat), 0);
     
     order.paymentStatus = 'paid';
