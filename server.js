@@ -221,16 +221,16 @@ app.post('/api/login', (req, res) => {
 // ── 7. MOVIE ROUTES ──
 
 app.get('/api/movies', (req, res) => {
-    let result = [...MOVIES]; // העתקה פשוטה ומהירה
+    let result = [...MOVIES]; 
     const { sort, year, id, badge, ...textFilters } = req.query;
 
-    // 1. ולידציה: הפרדה בין מיון לסינון
+    // 1. ולידציה: מניעת שילוב מיון וסינון (לפי דרישות הפרויקט)
     const hasFilters = Object.keys(req.query).some(key => key !== 'sort');
     if (sort && hasFilters) {
         return res.status(400).json({ error: "Bad Request", message: "Cannot combine 'sort' with filtering." });
     }
 
-    // 2. לולאת ולידציה מאוחדת (ריק, אורך, תווים מיוחדים)
+    // 2. Gatekeeper: לולאת ולידציה לפרמטרים (אורך, תווים מיוחדים וריק)
     const specialCharsRegex = /[!@#$%^&*()"{}+|<>]/;
     for (const [key, value] of Object.entries(req.query)) {
         if (value === "") return res.status(400).json({ error: "Bad Request", message: `Parameter '${key}' cannot be empty.` });
@@ -244,55 +244,42 @@ app.get('/api/movies', (req, res) => {
             }
         }
     }
-
-    // 3. ולידציה של שנה
+    // 3. ולידציה טכנית לשנה
     if (year && isNaN(parseInt(year))) return res.status(400).json({ error: "Bad Request", message: "Year must be a number" });
 
-    // --- לוגיקת סינון ---
-    if (id) result = result.filter(m => m.id === parseInt(id));
-    if (year) result = result.filter(m => m.year === parseInt(year));
-    if (badge) result = result.filter(m => m.badge === badge.toUpperCase().replace('-', ' '));
-
-    if (textFilters.genre) {
-        const genre = textFilters.genre.toLowerCase();
-        if (!MOVIES.some(m => m.genre.toLowerCase() === genre)) {
-            return res.status(404).json({ error: "Not Found", message: `Genre '${genre}' not found.` });
+    // 4. לוגיקת סינון מאוחדת (Single Pass) - פותר בעיות ביצועים ו-502
+    result = MOVIES.filter(m => {
+        if (id && m.id !== parseInt(id)) return false;
+        if (year && m.year !== parseInt(year)) return false;
+        if (badge && m.badge !== badge.toUpperCase().replace('-', ' ')) return false;
+        if (textFilters.genre && m.genre.toLowerCase() !== textFilters.genre.toLowerCase()) return false;
+        if (textFilters.title && !m.title.toLowerCase().includes(textFilters.title.toLowerCase())) return false;
+        if (textFilters.cast && !m.cast?.some(a => String(a).toLowerCase().includes(textFilters.cast.toLowerCase()))) return false;
+        
+        // חיפוש גלובלי (q)
+        if (textFilters.q) {
+            const q = textFilters.q.toLowerCase();
+            return m.title.toLowerCase().includes(q) || 
+                   m.genre.toLowerCase().includes(q) || 
+                   m.cast?.some(a => String(a).toLowerCase().includes(q));
         }
-        result = result.filter(m => m.genre.toLowerCase() === genre);
-    }
+        return true;
+    });
 
-    if (textFilters.title) result = result.filter(m => m.title.toLowerCase().includes(textFilters.title.toLowerCase()));
-    
-    if (textFilters.cast) {
-        result = result.filter(m => m.cast?.some(a => String(a).toLowerCase().includes(textFilters.cast.toLowerCase())));
-    }
-
-    if (textFilters.q) {
-        const query = textFilters.q.toLowerCase();
-        result = result.filter(m => 
-            m.title.toLowerCase().includes(query) || 
-            m.genre.toLowerCase().includes(query) || 
-            m.cast?.some(a => String(a).toLowerCase().includes(query))
-        );
-    }
-
-    // --- לוגיקת מיון ---
-    // --- לוגיקת מיון ---
+    // 5. לוגיקת מיון (במידה ולא בוצע סינון)
     if (sort && result.length > 1) {
         result.sort((a, b) => typeof a[sort] === 'number' ? b[sort] - a[sort] : String(a[sort]).localeCompare(String(b[sort])));
     } 
     
-    // --- התיקון החדש: בדיקה אם נשארו תוצאות ---
+    // 6. טיפול במקרה של חוסר תוצאות (400 לפי דרישת הטסטים שלך)
     if (result.length === 0) {
         return res.status(400).json({ 
             error: "Bad Request", 
             message: "No movies found matching the combined criteria." 
         });
     }
-
-    res.json(result); // אם יש תוצאות, החזר אותן כרגיל
+    res.json(result); 
 });
-
 app.get('/api/movies/:id/occupied', (req, res) => {
     const { date, time } = req.query;
     const movieId = parseInt(req.params.id);
