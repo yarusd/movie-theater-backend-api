@@ -330,11 +330,34 @@ app.put('/api/movies/:id', requireApiKey, (req, res) => {
 });
 
 app.patch('/api/movies/:id', requireApiKey, (req, res) => {
-    const movie = MOVIES.find(m => m.id === parseInt(req.params.id));
-    if (!movie) return res.status(404).json({ error: "Movie not found" });
+    const id = parseInt(req.params.id);
+    const movie = MOVIES.find(m => m.id === id);
     
-    // מעדכן רק את השדות שנשלחו ב-Body
-    Object.assign(movie, req.body); 
+    if (!movie) return res.status(404).json({ error: "Movie not found" });
+
+    // ולידציה דינמית: משתמשים ב-Schema הקיימת אבל הופכים את כל השדות לאופציונליים
+    // כך שאם נשלח 'title', הוא חייב לעמוד בחוקים, אבל אם לא נשלח - זה בסדר.
+    const patchSchema = movieSchema.fork(Object.keys(movieSchema.describe().keys), (schema) => schema.optional());
+    const { error, value } = patchSchema.validate(req.body);
+
+    if (error) {
+        return res.status(400).json({ 
+            error: "Validation Failed", 
+            message: error.details[0].message 
+        });
+    }
+    // ולידציה נוספת נגד תווים מיוחדים (בדיוק כמו ב-GET)
+    const specialCharsRegex = /[!@#$%^&*()"{}+|<>]/;
+    for (const [key, val] of Object.entries(req.body)) {
+        if (val === "") {
+            return res.status(400).json({ error: "Bad Request", message: `Field '${key}' cannot be empty.` });
+        }
+        if (['title', 'genre', 'badge'].includes(key) && typeof val === 'string' && specialCharsRegex.test(val)) {
+            return res.status(400).json({ error: "Bad Request", message: `Field '${key}' contains invalid characters.` });
+        }
+    }
+
+    Object.assign(movie, value); 
     res.json({ message: "Fields updated successfully", movie });
 });
 
