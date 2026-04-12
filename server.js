@@ -416,43 +416,53 @@ app.post('/api/orders', (req, res) => {
 app.post('/api/payments/pay-existing', (req, res) => {
     const { orderId, cardHolder, cardNumber, expiry, cvv } = req.body;
 
-    // 1. חיפוש ההזמנה (קיים)
+    // 1. חיפוש ההזמנה
     const order = ORDERS.find(o => o.orderId === orderId);
     if (!order) {
         return res.status(404).json({ error: "Not Found", message: "Order ID not found." });
     }
 
-    // 2. בדיקת Conflict (קיים)
+    // 2. בדיקת Conflict
     if (order.paymentStatus === 'paid') {
         return res.status(409).json({ error: "Conflict", message: "This order is already paid." });
     }
 
-    // --- 🟢 תוספת: ולידציית נתונים (פותר את רוב ה-Failures בטסטים) ---
-    
-    // בדיקת שדות חובה (פותר את T14.23 - Missing cardNumber)
+    // --- 🟢 יישור קו עם לוגיקת Checkout (ולידציות 400) ---
+
+    // בדיקת שדות חובה
     if (!cardNumber || !cardHolder || !expiry || !cvv) {
         return res.status(400).json({ error: "Bad Request", message: "Missing required payment fields." });
     }
 
-    // ולידציית שם (פותר את T14.16 עד T14.20)
-    if (typeof cardHolder !== 'string' || cardHolder.trim().length < 3 || /[^a-zA-Z\s]/.test(cardHolder)) {
+    // ולידציית שם - הגבלה ל-50 תווים (פותר את T15.6)
+    if (typeof cardHolder !== 'string' || cardHolder.trim().length < 3 || cardHolder.length > 50 || /[^a-zA-Z\s]/.test(cardHolder)) {
         return res.status(400).json({ error: "Bad Request", message: "Invalid card holder name." });
     }
 
-    // ולידציית אורך כרטיס (פותר את T14.21 ו-T14.22)
+    // בדיקת רווחים במספר כרטיס - החזרה של 400 לפני הניקוי (פותר את T15.9)
+    if (cardNumber.includes(" ")) {
+        return res.status(400).json({ error: "Bad Request", message: "Card number cannot contain spaces." });
+    }
+
     const cleanCardNumber = cardNumber.replace(/\s/g, "");
-    if (cleanCardNumber.length < 13 || cleanCardNumber.length > 19) {
+    if (cleanCardNumber.length < 13 || cleanCardNumber.length > 19 || isNaN(cleanCardNumber)) {
         return res.status(400).json({ error: "Bad Request", message: "Invalid card number length." });
     }
 
-    // ולידציית CVV (פותר את T14.28 ו-T14.29)
-    if (cvv.length < 3 || cvv.length > 4 || isNaN(cvv)) {
+    // ולידציית תאריך - פורמט וחודש תקין 01-12 (פותר את T15.13)
+    const expiryParts = expiry.split('/');
+    const month = parseInt(expiryParts[0]);
+    if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(expiry) || month < 1 || month > 12) {
+        return res.status(400).json({ error: "Bad Request", message: "Invalid expiry month." });
+    }
+
+    // ולידציית CVV - בדיוק 3 ספרות (פותר את T15.14)
+    if (!/^\d{3}$/.test(cvv)) {
         return res.status(400).json({ error: "Bad Request", message: "Invalid CVV." });
     }
 
-    // --- 🟢 סוף תוספת ולידציה ---
+    // --- 🟢 בדיקות סליקה (402 Payment Required) ---
 
-    // 3. ולידציית תוקף (פותר את T14.25, T14.26)
     if (isExpired(expiry)) {
         return res.status(402).json({ 
             error: "Payment Required", 
@@ -461,12 +471,12 @@ app.post('/api/payments/pay-existing', (req, res) => {
         });
     }
 
-    // 4. סימולציית דחייה (INSUFFICIENT_FUNDS)
     if (cleanCardNumber.startsWith("0000")) {
         return res.status(402).json({ error: "Payment Required", code: "INSUFFICIENT_FUNDS" });
     }
 
-    // 5. חישוב ועדכון
+    // --- 🟢 סיום ועדכון (סטטוס 200 כמו שביקשת) ---
+
     const totalAmount = order.seats.reduce((sum, seat) => sum + getSeatPrice(seat), 0);
     
     order.paymentStatus = 'paid';
