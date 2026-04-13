@@ -76,7 +76,6 @@
         <li><a onclick="showSection('health')">🟢 System Health</a></li>
         <li><a onclick="showSection('get-movies-all')">🟢 Get Movie List</a></li>
         <li><a onclick="showSection('get-movies-filtered')">🟢 Movie Filters</a></li>
-        <li><a onclick="showSection('get-occupied')">🟢 Seat Check</a></li>
         <li><a onclick="showSection('get-orders')">🟢 User Orders</a></li>
 
         <div class="nav-cat">Creation (POST)</div>
@@ -205,17 +204,6 @@
                 ]
                 </pre>
 
-            </div>
-        </section>
-
-        <section id="get-occupied" class="content-section">
-            <div class="endpoint get">
-                <span class="method m-get">GET</span> <code>/movies/:id/occupied</code>
-                <h3>Occupied Seats Check</h3>
-                <h4>Example Request:</h4>
-                <code>GET /api/movies/25/occupied?date=2026-10-10&time=20:00</code>
-                <h4>Response (200 OK):</h4>
-                <pre>["A1", "C5", "E8"]</pre>
             </div>
         </section>
 

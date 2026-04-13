@@ -280,14 +280,6 @@ app.get('/api/movies', (req, res) => {
     }
     res.json(result); 
 });
-app.get('/api/movies/:id/occupied', (req, res) => {
-    const { date, time } = req.query;
-    const movieId = parseInt(req.params.id);
-    const occupied = ORDERS
-        .filter(o => o.movieId === movieId && o.date === date && o.time === time)
-        .flatMap(o => o.seats);
-    res.json(occupied);
-});
 
 app.post('/api/movies', requireApiKey, (req, res) => {
     const { error, value } = movieSchema.validate(req.body);
