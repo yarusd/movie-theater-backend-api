@@ -69,15 +69,26 @@ const movieSchema = Joi.object({
 });
 
 const registerSchema = Joi.object({
-    name: Joi.string().min(2).max(40).pattern(/^[a-zA-Z\s]+$/).required(),
+    // השם מקבל אותיות, מספרים ורווחים
+    name: Joi.string().min(2).max(40).pattern(/^[a-zA-Z0-9\s]+$/).required(),
     email: Joi.string().email().required(),
-    password: Joi.string().min(6).max(50).required(),
+    
+    // סיסמה: מקבלת סטרינג (מינימום 6) או מספר (מינימום 100,000 שזה 6 ספרות)
+    password: Joi.alternatives().try(
+        Joi.string().min(6).max(50),
+        Joi.number().min(100000) 
+    ).required(),
+    
     password_confirmation: Joi.any().valid(Joi.ref('password')).required()
 });
 
 const loginSchema = Joi.object({
     email: Joi.string().email().required(),
-    password: Joi.string().required()
+    // גם בלוגין נאפשר את אותה גמישות
+    password: Joi.alternatives().try(
+        Joi.string().min(6),
+        Joi.number().min(100000)
+    ).required()
 });
 
 const orderSchema = Joi.object({
@@ -209,11 +220,38 @@ app.post('/api/register', (req, res) => {
 });
 
 app.post('/api/login', (req, res) => {
-    const { email, password } = req.body;
-    const user = TEST_USERS.find(u => u.email === email && u.password === password);
+    // 1. הפעלת הולידציה - כאן נקבל 400 על שדות חסרים או פורמט לא תקין!
+    const { error, value } = loginSchema.validate(req.body);
+    if (error) {
+        return res.status(400).json({ 
+            error: "Bad Request", 
+            message: error.details[0].message 
+        });
+    }
+
+    const { email, password } = value;
+
+    // 2. חיפוש המשתמש (String המרה מבטיחה ש-123456 יעבוד)
+    const user = TEST_USERS.find(u => 
+        u.email === email && String(u.password) === String(password)
+    );
     
-    if (!user) return res.status(401).json({ error: "Unauthorized", message: "Invalid email or password." });
-    if (user.locked) return res.status(403).json({ error: "Forbidden", message: "Your account is locked." });
+    // 3. אם לא נמצא - 401
+    if (!user) {
+        return res.status(401).json({ 
+            error: "Unauthorized", 
+            message: "Invalid email or password." 
+        });
+    }
+
+    // 4. בדיקת נעילה - כאן נחזיר 403 והודעה מפורטת כמו שרצית
+    if (user.locked) {
+        return res.status(403).json({ 
+            error: "Forbidden", 
+            message: "Your account is locked.",
+            locked: "True" // הוספתי את זה כדי להתאים לטסט שלך
+        });
+    }
 
     res.json({ id: user.id, name: user.name, email: user.email, role: user.role, locked: user.locked });
 });
