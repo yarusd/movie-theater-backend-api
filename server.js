@@ -70,7 +70,7 @@ const movieSchema = Joi.object({
 
 const registerSchema = Joi.object({
     // השם מקבל אותיות, מספרים ורווחים
-    name: Joi.string().min(2).max(40).pattern(/^[a-zA-Z0-9\s]+$/).required(),
+    name: Joi.string().min(2).max(50).pattern(/^[a-zA-Z0-9\s]+$/).required(),
     email: Joi.string().email().required(),
     
     // סיסמה: מקבלת סטרינג (מינימום 6) או מספר (מינימום 100,000 שזה 6 ספרות)
