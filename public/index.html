@@ -140,13 +140,13 @@
             <table>
                 <tr><th>Code</th><th>Label</th><th>QA Scenario Description</th></tr>
                 <tr><td><code>200</code></td><td>OK</td><td>Successful data retrieval or update.</td></tr>
-                <tr><td><code>201</code></td><td>Created</td><td>New Resource (Movie/Order/User) created successfully.</td></tr>
-                <tr><td><code>400</code></td><td>Bad Request</td><td>Validation failed. Check English characters or mandatory fields.</td></tr>
-                <tr><td><code>401</code></td><td>Unauthorized</td><td>Missing or invalid <code>x-api-key</code> header.</td></tr>
+                <tr><td><code>201</code></td><td>Created</td><td>New Resource created successfully.</td></tr>
+                <tr><td><code>400</code></td><td>Bad Request</td><td>Validation failed. Invalid format.</td></tr>
+                <tr><td><code>401</code></td><td>Unauthorized</td><td>Missing API Key or invalid credentials. <code>x-api-key</code> header.</td></tr>
                 <tr><td><code>402</code></td><td>Payment Req.</td><td>Transaction declined. Card expired or insufficient funds.</td></tr>
                 <tr><td><code>403</code></td><td>Forbidden</td><td>Locked account or IDOR security attempt detected.</td></tr>
                 <tr><td><code>404</code></td><td>Not Found</td><td>The requested Resource ID does not exist in the database.</td></tr>
-                <tr><td><code>409</code></td><td>Conflict</td><td>Duplicate movie title or seats already booked.</td></tr>
+                <tr><td><code>409</code></td><td>Conflict</td><td>Resource already exists (e.g., Duplicate email/movie title).</td></tr>
             </table>
         </section>
 

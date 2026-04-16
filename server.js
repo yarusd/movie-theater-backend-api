@@ -76,7 +76,9 @@ const registerSchema = Joi.object({
     // סיסמה: מקבלת סטרינג (מינימום 6) או מספר (מינימום 100,000 שזה 6 ספרות)
     password: Joi.alternatives().try(
         Joi.string().min(6).max(50),
-        Joi.number().min(100000) 
+        Joi.number().min(100000).messages({
+        'number.min': 'password must be at least 6 digits' // הוספת "must be" להתאמה לטסט
+    })
     ).required(),
     
     password_confirmation: Joi.any().valid(Joi.ref('password')).required()
@@ -86,7 +88,9 @@ const loginSchema = Joi.object({
     email: Joi.string().email().required(),
     password: Joi.alternatives().try(
         Joi.string().min(6).max(50),      // אפשרות 1: מחרוזת בין 6 ל-50 תווים
-        Joi.number().min(100000).max(9999999999) // אפשרות 2: מספר עם לפחות 6 ספרות
+        Joi.number().min(100000).max(9999999999).messages({
+        'number.min': 'password must be at least 6 digits' // הוספת "must be" להתאמה לטסט 7
+    })
     ).required()
 });
 const orderSchema = Joi.object({
@@ -209,7 +213,14 @@ app.post('/api/register', (req, res) => {
     if (error) return res.status(400).json({ error: "Validation Failed", message: error.details[0].message });
 
     const userExists = TEST_USERS.find(u => u.email === value.email);
-    if (userExists) return res.status(400).json({ error: "Conflict", message: "Email already registered." });
+    
+    // שינוי ל-409 ועדכון ההודעה
+    if (userExists) {
+        return res.status(409).json({ 
+            error: "Conflict", 
+            message: "User already exists with this email." 
+        });
+    }
 
     const newUser = { id: Date.now(), ...value, role: "user", locked: false };
     delete newUser.password_confirmation;
