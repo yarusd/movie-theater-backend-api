@@ -84,13 +84,11 @@ const registerSchema = Joi.object({
 
 const loginSchema = Joi.object({
     email: Joi.string().email().required(),
-    // גם בלוגין נאפשר את אותה גמישות
     password: Joi.alternatives().try(
-        Joi.string().min(6),
-        Joi.number().min(100000)
+        Joi.string().min(6).max(50),      // אפשרות 1: מחרוזת בין 6 ל-50 תווים
+        Joi.number().min(100000).max(9999999999) // אפשרות 2: מספר עם לפחות 6 ספרות
     ).required()
 });
-
 const orderSchema = Joi.object({
     userId: Joi.number().required(),
     movieId: Joi.number().required(),
